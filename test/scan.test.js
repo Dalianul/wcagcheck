@@ -81,6 +81,29 @@ describe('document-level rules', () => {
     expect(body.summary.totalOccurrences).toBe(0);
   });
 
+  // axe deliberately tags its equivalents (page-has-heading-one,
+  // landmark-one-main) best-practice with no WCAG tag. SC 1.3.1 is about
+  // structure being programmatically determinable, and a page with h2s but no
+  // h1 still satisfies that. Reporting them as clause 9.1.3.1 failures claims
+  // the law requires something it does not.
+  it('reports a missing h1 and main as best practice, not a requirement failure', async () => {
+    const html = '<!doctype html><html lang="en"><head><title>t</title></head><body><h2>x</h2></body></html>';
+    const { body } = await scan(html);
+    for (const id of ['no-h1', 'no-main-landmark']) {
+      const finding = body.issues.find((i) => i.id === id);
+      expect(finding, id).toBeTruthy();
+      expect(finding.bestPractice, id).toBe(true);
+      expect(finding.en301549, id).toBeNull();
+      expect(finding.wcag, id).toBeNull();
+    }
+  });
+
+  it('still reports missing title and lang as real requirement failures', async () => {
+    const { body } = await scan('<!doctype html><html><body><main><h1>x</h1></main></body></html>');
+    expect(body.issues.find((i) => i.id === 'missing-title').en301549).toBe('9.2.4.2');
+    expect(body.issues.find((i) => i.id === 'html-missing-lang').en301549).toBe('9.3.1.1');
+  });
+
   // Regression: the title selector used to match <svg><title>, so an inline icon
   // satisfied the page-title check and corrupted the accessible-name stack.
   it('does not accept an svg title as the page title', async () => {

@@ -77,7 +77,73 @@ function renderMerged(axeResult, staticResult, requested) {
   for (const f of merged.bestPractices) results.append(renderAxeEntry(f, 'minor'));
   for (const f of merged.incomplete) results.append(renderAxeEntry(f, 'moderate'));
 
+  results.append(renderConformance(merged.conformance));
   results.append(renderScope(merged.scope, merged.truncated));
+}
+
+const STATUS_LABEL = {
+  'does-not-support': 'Does not support',
+  'partially-supports': 'Partially supports',
+  'supports': 'No failures detected',
+  'not-applicable': 'Not present on this page',
+  'cannot-determine': 'Could not be decided',
+  'not-tested': 'Not checked — needs a person',
+};
+
+/**
+ * Every clause 9 requirement, including the ones automation never examined.
+ *
+ * Collapsed by default: fifty rows would bury the findings, which are what
+ * someone came for. Open, it is the part no other free scanner produces.
+ */
+function renderConformance({ rows, summary }) {
+  const box = el('details', 'conformance');
+  const untested = summary['not-tested'];
+
+  const head = el('summary', 'conformance__summary');
+  head.append(el('span', 'conformance__title', `All ${rows.length} EN 301 549 requirements`));
+  head.append(el('span', 'conformance__hint',
+    `${rows.length - untested} examined by automation · ${untested} need a person`));
+  box.append(head);
+
+  box.append(el('p', 'conformance__caveat',
+    'These are automated results. "No failures detected" means nothing the machine ' +
+    'could check went wrong on this page — not that the requirement is met. Roughly ' +
+    'two thirds of accessibility requirements can only be judged by a person, and ' +
+    'they are listed here rather than quietly left out.'));
+
+  const table = el('table', 'conformance__table');
+  const caption = el('caption', 'visually-hidden',
+    `EN 301 549 ${IN_FORCE} clause 9 requirements and what the automated check found for each`);
+  table.append(caption);
+
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  for (const [label, cls] of [['Clause', 'col-clause'], ['Requirement', ''], ['Level', 'col-level'], ['Result', '']]) {
+    const th = el('th', cls || null, label);
+    th.scope = 'col';
+    hrow.append(th);
+  }
+  thead.append(hrow);
+  table.append(thead);
+
+  const tbody = document.createElement('tbody');
+  for (const row of rows) {
+    const tr = el('tr', `conformance__row conformance__row--${row.status}`);
+    const clause = el('th', 'conformance__clause', row.clause);
+    clause.scope = 'row';
+    tr.append(clause);
+    tr.append(el('td', null, row.name));
+    tr.append(el('td', 'conformance__level', row.level));
+    tr.append(el('td', 'conformance__status', STATUS_LABEL[row.status]));
+    tbody.append(tr);
+  }
+  table.append(tbody);
+
+  const scroller = el('div', 'conformance__scroll');
+  scroller.append(table);
+  box.append(scroller);
+  return box;
 }
 
 /** One finding as a ledger entry. */
@@ -88,9 +154,19 @@ function renderAxeEntry(finding, severity) {
   // WCAG 2.2 criterion the standard in force has not adopted yet, in which case
   // the criterion number is the honest thing to show.
   const marker = finding.en301549 || (finding.arrivesIn ? finding.wcag : finding.id);
-  const clause = el('p', 'entry__clause', marker);
-  if (finding.en301549) clause.setAttribute('aria-label', `EN 301 549 clause ${finding.en301549}`);
-  else if (finding.arrivesIn) clause.setAttribute('aria-label', `WCAG success criterion ${finding.wcag}`);
+
+  // "9.4.1.2" alone is announced as a string of digits, so it needs a spoken
+  // prefix — but not via aria-label. A <p> has an implicit role of paragraph,
+  // which prohibits an accessible name; our own scanner flagged this page for
+  // it. Visually hidden text does the same job within the spec.
+  const clause = el('p', 'entry__clause');
+  const spoken = finding.en301549
+    ? 'EN 301 549 clause '
+    : finding.arrivesIn
+      ? 'WCAG success criterion '
+      : null;
+  if (spoken) clause.append(el('span', 'visually-hidden', spoken));
+  clause.append(document.createTextNode(marker));
   entry.append(clause);
 
   const body = el('div', 'entry__body');

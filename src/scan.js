@@ -34,8 +34,12 @@ const RULES = {
   'viewport-blocks-zoom': { impact: 'serious',  wcag: '1.4.4', level: 'AA', title: 'Zoom disabled by viewport meta' },
   'media-no-captions':    { impact: 'serious',  wcag: '1.2.2', level: 'A',  title: 'Video or audio without captions' },
   'media-autoplay':       { impact: 'moderate', wcag: '1.4.2', level: 'A',  title: 'Media plays automatically' },
-  'no-main-landmark':     { impact: 'moderate', wcag: '1.3.1', level: 'A',  title: 'No main landmark' },
-  'no-h1':                { impact: 'moderate', wcag: '1.3.1', level: 'A',  title: 'Page has no h1 heading' },
+  // Best practice, not a requirement. axe tags its equivalents
+  // (landmark-one-main, page-has-heading-one) best-practice with no WCAG tag,
+  // and it is right to: 1.3.1 asks that structure be programmatically
+  // determinable, which a page with headings but no h1 still satisfies.
+  'no-main-landmark':     { impact: 'moderate', bestPractice: true, title: 'No main landmark' },
+  'no-h1':                { impact: 'moderate', bestPractice: true, title: 'Page has no h1 heading' },
   'heading-skip':         { impact: 'moderate', wcag: '1.3.1', level: 'A',  title: 'Heading levels skipped' },
   'table-no-header':      { impact: 'moderate', wcag: '1.3.1', level: 'A',  title: 'Data table without header cells' },
 };
@@ -184,9 +188,10 @@ function createReport() {
           impact: rule.impact,
           count: entry.count,
           examples: entry.examples,
-          wcag: rule.wcag,
-          wcagLevel: rule.level,
-          en301549: `9.${rule.wcag}`,
+          bestPractice: Boolean(rule.bestPractice),
+          wcag: rule.wcag ?? null,
+          wcagLevel: rule.level ?? null,
+          en301549: rule.wcag ? `9.${rule.wcag}` : null,
           remedy: REMEDY[ruleId],
         });
       }

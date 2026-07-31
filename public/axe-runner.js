@@ -14,7 +14,7 @@
  * 'visible-area' instead of implying whole-page coverage.
  */
 
-import { classify } from './en301549.js';
+import { classify, criterionFromTags } from './en301549.js';
 import { sanitiseForAnalysis } from './sanitise.js';
 
 const AXE_URL = '/vendor/axe.min.js';
@@ -119,11 +119,30 @@ export async function runAxeScan(target) {
       (r) => r.id === 'color-contrast'
     );
 
+    // Per-criterion tallies across all four buckets, which is what the
+    // conformance table needs. The findings list only ever sees violations, so
+    // passes and inapplicable would otherwise be thrown away — and those are
+    // exactly what distinguishes "nothing failed" from "never examined".
+    const byCriterion = {};
+    const tallyBucket = (bucket, list) => {
+      for (const result of list) {
+        const wcag = criterionFromTags(result.tags);
+        if (!wcag) continue;
+        byCriterion[wcag] ??= { violations: 0, passes: 0, incomplete: 0, inapplicable: 0 };
+        byCriterion[wcag][bucket] += 1;
+      }
+    };
+    tallyBucket('violations', results.violations);
+    tallyBucket('passes', results.passes);
+    tallyBucket('incomplete', results.incomplete);
+    tallyBucket('inapplicable', results.inapplicable);
+
     return {
       finalUrl: payload.finalUrl,
       engine: AXE_VERSION,
       truncated: Boolean(payload.truncated),
       contrastScope: contrastEvaluated ? 'visible-area' : 'not-assessed',
+      byCriterion,
       requirements: violations.filter((f) => f.en301549),
       // A genuine WCAG 2.2 failure with no clause in the version in force is
       // neither of the other two things.

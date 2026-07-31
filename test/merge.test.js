@@ -92,6 +92,21 @@ describe('which static findings are merged in', () => {
     expect(ids(merged.requirements)).toEqual(['no-h1', 'img-missing-alt']);
   });
 
+  // no-h1 and no-main-landmark are best practice, not clause 9 requirements —
+  // axe classifies its own equivalents the same way.
+  it('routes a best-practice static finding away from requirements', () => {
+    const merged = mergeResults(
+      axeResult(),
+      staticResult([
+        staticIssue('no-h1', { bestPractice: true, wcag: null, en301549: null, wcagLevel: null }),
+        staticIssue('missing-title', { wcag: '2.4.2', en301549: '9.2.4.2' }),
+      ]),
+      'example.com'
+    );
+    expect(ids(merged.requirements)).toEqual(['missing-title']);
+    expect(ids(merged.bestPractices)).toEqual(['no-h1']);
+  });
+
   it('carries the EN clause and level across from the static shape', () => {
     const merged = mergeResults(null, staticResult([staticIssue('no-h1')]), 'example.com');
     expect(merged.requirements[0]).toMatchObject({

@@ -11,6 +11,7 @@
  */
 
 import { IN_FORCE, STANDARD_VERSIONS } from './criteria.js';
+import { conformanceTable, summarise } from './conformance.js';
 
 /** The four static rules axe cannot evaluate inside a shadow root. */
 export const DOCUMENT_LEVEL_RULES = new Set([
@@ -44,12 +45,20 @@ export function mergeResults(axeResult, staticResult, requested) {
     (i) => !axeRan || DOCUMENT_LEVEL_RULES.has(i.id)
   );
 
-  const requirements = [...staticFindings.map(fromStatic), ...(axeResult?.requirements ?? [])];
+  // Two of the four document-level rules — no h1, no main landmark — are best
+  // practice rather than requirements, and the static scan says which.
+  const requirements = [
+    ...staticFindings.filter((i) => !i.bestPractice).map(fromStatic),
+    ...(axeResult?.requirements ?? []),
+  ];
   // Real WCAG 2.2 failures that the version of EN 301 549 in force does not yet
   // contain. Counting them as requirement failures overstates the law; filing
   // them under best practice understates the finding.
   const notYetRequired = axeResult?.notYetRequired ?? [];
-  const bestPractices = axeResult?.bestPractices ?? [];
+  const bestPractices = [
+    ...staticFindings.filter((i) => i.bestPractice).map(fromStatic),
+    ...(axeResult?.bestPractices ?? []),
+  ];
   // Never folded into passes or requirements: axe could not decide these.
   const incomplete = axeResult?.incomplete ?? [];
 
@@ -61,6 +70,10 @@ export function mergeResults(axeResult, staticResult, requested) {
     bestPractices,
     incomplete,
     figures: tally({ axeRan, requirements, notYetRequired, bestPractices, incomplete }),
+    conformance: (() => {
+      const rows = conformanceTable(axeResult, staticResult);
+      return { rows, summary: summarise(rows) };
+    })(),
     scope: {
       standard: axeRan
         ? `${axeResult.engine}, WCAG 2.2 A/AA plus best practices`
