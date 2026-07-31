@@ -298,15 +298,27 @@ Expected: PASS, all tests including the pre-existing 60.
 
 - [ ] **Step 5: Mutation-check the level-tag exclusion**
 
-The single most fragile assumption is that `wcag2a` is not mistaken for a criterion. Break it deliberately and confirm the suite objects:
+The single most fragile assumption is that a level tag like `wcag21aa` is not
+mistaken for a criterion. What actually protects that is the **`$` anchor**, not
+the `+` quantifier — verified before writing this step:
+
+| Pattern | Matches |
+|---|---|
+| `^wcag(\d)(\d)(\d+)$` (shipped) | `wcag111`, `wcag1410` |
+| `^wcag(\d)(\d)(\d*)$` | `wcag111`, `wcag1410` — *identical, so mutating `+`→`*` proves nothing* |
+| `^wcag(\d)(\d)(\d*)` (no anchor) | `wcag21aa`, `wcag22aa`, `wcag111`, `wcag1410` |
+
+So mutate the anchor. Back up the file, remove the trailing `$` from
+`CRITERION_TAG`, and run:
 
 ```bash
 cp public/en301549.js /tmp/en.bak.js
-sed -i '' 's/\^wcag(\\d)(\\d)(\\d+)\$/^wcag(\\d)(\\d)(\\d*)$/' public/en301549.js
+# edit public/en301549.js: change /^wcag(\d)(\d)(\d+)$/ to /^wcag(\d)(\d)(\d+)/
 npx vitest run test/en301549.test.js
 ```
 
-Expected: FAIL on "returns null when only level tags are present".
+Expected: FAIL on "returns null when only level tags are present", because
+`wcag21aa` now yields the malformed criterion `2.1.`.
 
 Restore and confirm green:
 
