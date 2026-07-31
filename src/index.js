@@ -7,6 +7,7 @@
  */
 
 import { handleScan } from './scan.js';
+import { handleFetchHtml } from './fetch-html.js';
 
 export default {
   async fetch(request, env) {
@@ -20,6 +21,16 @@ export default {
         });
       }
       return handleScan(request);
+    }
+
+    if (url.pathname === '/api/fetch') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return new Response(JSON.stringify({ error: 'Use GET.' }), {
+          status: 405,
+          headers: { 'content-type': 'application/json; charset=utf-8', allow: 'GET' },
+        });
+      }
+      return handleFetchHtml(request);
     }
 
     // Serve the styled 404 page rather than the runtime's bare text.

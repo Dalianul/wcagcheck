@@ -121,7 +121,7 @@ export function isBlockedHost(rawHost) {
   return false;
 }
 
-function normaliseUrl(raw) {
+export function normaliseUrl(raw) {
   if (!raw) throw new Error('Provide a url parameter.');
   let candidate = raw.trim();
   if (!/^https?:\/\//i.test(candidate)) candidate = 'https://' + candidate;
@@ -211,7 +211,7 @@ const FETCH_HEADERS = {
  * metadata address afterwards, and the request that actually goes out is not the
  * one that was checked.
  */
-async function fetchFollowingSafely(startUrl, signal) {
+export async function fetchFollowingSafely(startUrl, signal) {
   let current = startUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -276,6 +276,15 @@ async function scan(parsedUrl) {
     }
     if (response.status === 404) {
       throw new Error('That page does not exist (404). Check the path after the domain name.');
+    }
+    // 511 and 520-527 are gateway-level rejections, not the origin failing.
+    // Reporting them as "the site is broken" sends people to debug the wrong
+    // thing — emag.ro returns 511 to us while serving browsers normally.
+    if (response.status === 511 || (response.status >= 520 && response.status <= 527)) {
+      throw new Error(
+        `The site is blocking automated requests at its gateway (HTTP ${response.status}). ` +
+          'It loads normally in a browser, so this is not a fault on the site.'
+      );
     }
     if (response.status >= 500) {
       throw new Error(`The site itself is erroring (HTTP ${response.status}). Nothing to check yet.`);
