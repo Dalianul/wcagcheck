@@ -5,9 +5,13 @@
   "description": "Accessibility checker mapping WCAG 2.2 findings to EN 301 549 clauses",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.20.0",
+    "vitest": "^4.1.10",
     "wrangler": "^4.42.0"
   }
 }

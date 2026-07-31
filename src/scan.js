@@ -70,7 +70,56 @@ const VAGUE_LINK_TEXT = new Set([
 ]);
 
 const FILENAME_ALT = /\.(jpe?g|png|gif|svg|webp|avif|bmp|ico)$/i;
-const BLOCKED_HOST = /^(localhost$|127\.|10\.|192\.168\.|169\.254\.|::1$|0\.0\.0\.0$|172\.(1[6-9]|2\d|3[01])\.)/i;
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * True if the host must not be fetched.
+ *
+ * Parses addresses numerically rather than pattern-matching the string. A regex
+ * over hostnames misses too much: URL.hostname keeps the brackets on IPv6 so
+ * /::1$/ never matches "[::1]", a trailing dot defeats an anchored "localhost$",
+ * and IPv4-mapped IPv6 smuggles a v4 address through v6 syntax.
+ */
+export function isBlockedHost(rawHost) {
+  let host = rawHost.toLowerCase();
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
+  while (host.endsWith('.')) host = host.slice(0, -1);
+
+  if (host === '' || host === 'localhost' || host.endsWith('.localhost')) return true;
+  if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.home.arpa')) return true;
+
+  // IPv4-mapped IPv6 (::ffff:127.0.0.1) reduces to the embedded v4 address.
+  const mapped = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) host = mapped[1];
+
+  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b] = v4.slice(1).map(Number);
+    if (v4.slice(1).some((n) => Number(n) > 255)) return true;
+    if (a === 0 || a === 10 || a === 127) return true;            // this/private/loopback
+    if (a === 169 && b === 254) return true;                       // link-local + metadata
+    if (a === 172 && b >= 16 && b <= 31) return true;              // private
+    if (a === 192 && b === 168) return true;                       // private
+    if (a === 100 && b >= 64 && b <= 127) return true;             // CGNAT
+    if (a === 192 && b === 0) return true;                         // protocol assignments
+    if (a === 198 && (b === 18 || b === 19)) return true;          // benchmarking
+    if (a >= 224) return true;                                     // multicast + reserved
+    return false;
+  }
+
+  if (host.includes(':')) {
+    if (host === '::' || host === '::1') return true;              // unspecified/loopback
+    if (/^f[cd]/.test(host)) return true;                          // fc00::/7 unique local
+    if (/^fe[89ab]/.test(host)) return true;                       // fe80::/10 link-local
+    return false;
+  }
+
+  // A bare label with no dot is not a public domain (also catches decimal and
+  // hex integer IP forms like 2130706433 and 0x7f000001).
+  if (!host.includes('.')) return true;
+  return false;
+}
 
 function normaliseUrl(raw) {
   if (!raw) throw new Error('Provide a url parameter.');
@@ -87,11 +136,8 @@ function normaliseUrl(raw) {
     throw new Error('Only http and https addresses can be scanned.');
   }
   // Refuse loopback and private ranges so the scanner cannot be pointed inward.
-  if (BLOCKED_HOST.test(parsed.hostname) || parsed.hostname.endsWith('.local')) {
-    throw new Error('Private and local addresses cannot be scanned.');
-  }
-  if (!parsed.hostname.includes('.')) {
-    throw new Error('That does not look like a public domain.');
+  if (isBlockedHost(parsed.hostname)) {
+    throw new Error('That address is not a public website, so it cannot be checked.');
   }
   // A pasted fragment is never sent to the server; drop it so the reported
   // URL matches what was actually fetched.
@@ -146,33 +192,75 @@ function describeElement(tag, attrs) {
   return `<${tag}${parts.length ? ' ' + parts.join(' ') : ''}>`;
 }
 
+// Identify honestly. Measured against browser-spoofing UAs on 7 sites: spoofing
+// recovered nothing and actively lost w3.org (200 -> 403), which rejects requests
+// claiming to be Chrome while fingerprinting otherwise. Sites that block us
+// (403/429) do so on IP and TLS fingerprint, which no header can change.
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; wcagcheck.eu/1.0; +https://wcagcheck.eu)',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-GB,en;q=0.9,ro;q=0.8,de;q=0.7',
+};
+
+/**
+ * Fetches a URL, following redirects one hop at a time and re-checking the host
+ * at every hop.
+ *
+ * Letting the runtime follow redirects would mean only the first URL is ever
+ * validated: a public address is free to redirect to loopback or a link-local
+ * metadata address afterwards, and the request that actually goes out is not the
+ * one that was checked.
+ */
+async function fetchFollowingSafely(startUrl, signal) {
+  let current = startUrl;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const response = await fetch(current.toString(), {
+      redirect: 'manual',
+      signal,
+      headers: FETCH_HEADERS,
+    });
+
+    const isRedirect = response.status >= 300 && response.status < 400;
+    const location = response.headers.get('location');
+    if (!isRedirect || !location) return { response, finalUrl: current };
+
+    let next;
+    try {
+      next = new URL(location, current);
+    } catch {
+      throw new Error('The site redirected to an address that could not be understood.');
+    }
+    if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+      throw new Error('The site redirected to a non-web address, which cannot be followed.');
+    }
+    if (isBlockedHost(next.hostname)) {
+      throw new Error('The site redirected to a private address, which cannot be checked.');
+    }
+    next.hash = '';
+    current = next;
+  }
+  throw new Error(`The site redirected more than ${MAX_REDIRECTS} times. Give the final address directly.`);
+}
+
 async function scan(parsedUrl) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   let response;
+  let finalUrl;
   try {
-    response = await fetch(parsedUrl.toString(), {
-      redirect: 'follow',
-      signal: controller.signal,
-      // Identify honestly. Measured against browser-spoofing UAs on 7 sites:
-      // spoofing recovered nothing and actively lost w3.org (200 -> 403), which
-      // rejects requests claiming to be Chrome while fingerprinting otherwise.
-      // Sites that block us (403/429) do so on IP and TLS fingerprint, which no
-      // header can change.
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; wcagcheck.eu/1.0; +https://wcagcheck.eu)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-GB,en;q=0.9,ro;q=0.8,de;q=0.7',
-      },
-    });
+    ({ response, finalUrl } = await fetchFollowingSafely(parsedUrl, controller.signal));
   } catch (err) {
     clearTimeout(timer);
-    throw new Error(
-      err.name === 'AbortError'
-        ? 'The site took longer than 20 seconds to respond. Try again, or try a lighter page on the same site.'
-        : 'Could not reach that address. Check the spelling and that the site is public.'
-    );
+    if (err.name === 'AbortError') {
+      throw new Error(
+        'The site took longer than 20 seconds to respond. Try again, or try a lighter page on the same site.'
+      );
+    }
+    // Our own redirect diagnostics are already user-facing; keep them.
+    if (/redirect/i.test(err.message)) throw err;
+    throw new Error('Could not reach that address. Check the spelling and that the site is public.');
   }
   clearTimeout(timer);
 
@@ -517,7 +605,7 @@ async function scan(parsedUrl) {
   for (const issue of issues) counts[issue.impact] += issue.count;
 
   return {
-    url: response.url || parsedUrl.toString(),
+    url: finalUrl.toString(),
     scannedAt: new Date().toISOString(),
     pageTitle: state.titleText || null,
     bytesScanned: bytes,
