@@ -51,7 +51,7 @@
         <button class="probe__go" id="go" type="submit">Scan</button>
       </div>
       <div class="sweep" id="sweep" hidden><span class="sweep__bead"></span></div>
-      <p class="probe__note">20 checks &middot; no signup &middot; nothing stored</p>
+      <p class="probe__note">95+ checks &middot; contrast on the visible area &middot; no signup</p>
     </form>
 
     <div id="message" role="alert"></div>
@@ -73,9 +73,11 @@
       <div>
         <h3>Static analysis only</h3>
         <p>
-          This reads your page's HTML. That catches missing alt text, unlabelled form
-          fields, broken heading order and disabled zoom. It cannot judge colour
-          contrast or keyboard traps, which need a real browser to measure.
+          Your browser renders the page and runs the axe-core engine against it
+          &mdash; the same engine used in most accessibility test suites. Scripts
+          are never executed, so content built by JavaScript is not analysed, and
+          colour contrast is judged only for the part of the page that fits on
+          screen.
         </p>
       </div>
       <div>
@@ -94,9 +96,10 @@
   <div class="shell">
     <p>wcagcheck.eu &mdash; a free tool. No account, no tracking of the sites you test.</p>
     <p>References: <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a> &middot; <a href="https://www.etsi.org/deliver/etsi_en/301500_301599/301549/">EN 301 549</a></p>
+    <p>Analysis by <a href="https://github.com/dequelabs/axe-core">axe-core</a> 4.12.1, &copy; Deque Systems, used under the <a href="https://www.mozilla.org/en-US/MPL/2.0/">Mozilla Public License 2.0</a>. Source: <a href="https://github.com/dequelabs/axe-core">github.com/dequelabs/axe-core</a>.</p>
   </div>
 </footer>
 
-<script src="/app.js" defer></script>
+<script src="/app.js" type="module"></script>
 </body>
 </html>
