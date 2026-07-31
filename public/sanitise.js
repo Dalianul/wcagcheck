@@ -25,6 +25,26 @@ function stripElement(html, tag) {
   return html.replace(paired, '').replace(selfClosing, '');
 }
 
+/**
+ * Rewrites a srcset list, which is comma-separated candidates each optionally
+ * followed by a descriptor: "a.png 1x, b.png 2x".
+ *
+ * Passing the whole list to absolutise() percent-encoded the spaces and commas
+ * into a single bogus URL, so responsive images silently stopped resolving.
+ */
+function absolutiseSrcset(value, baseUrl) {
+  return value
+    .split(',')
+    .map((candidate) => {
+      const trimmed = candidate.trim();
+      if (!trimmed) return '';
+      const [url, ...descriptors] = trimmed.split(/\s+/);
+      return [absolutise(url, baseUrl), ...descriptors].join(' ');
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
 /** Rewrites a relative URL against the scanned page's address. */
 function absolutise(value, baseUrl) {
   const trimmed = value.trim();
@@ -46,9 +66,16 @@ export function sanitiseForAnalysis(html, baseUrl) {
   out = out.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
 
   // Every event-handler attribute, quoted or bare, any case.
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*"[^"]*"/gi, '');
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*'[^']*'/gi, '');
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*[^\s>]+/gi, '');
+  //
+  // The separator class is [\s/]+ and not \s+ because HTML accepts a solidus
+  // between attributes: after a quoted value, and directly after the tag name,
+  // `/` is a separator rather than part of the value. Requiring whitespace let
+  // <img src="x.png"/onerror="..."> through, and it fired — verified in Chrome,
+  // four variants of it. Unquoted values are unaffected either way, since there
+  // `/` is a legitimate value character and no second attribute is parsed.
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*"[^"]*"/gi, ' ');
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*'[^']*'/gi, ' ');
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*[^\s>]+/gi, ' ');
 
   // Script-bearing URLs, keeping the element so axe still evaluates it.
   out = out.replace(
@@ -57,13 +84,16 @@ export function sanitiseForAnalysis(html, baseUrl) {
   );
 
   // Shadow DOM ignores <base>, so URLs must already be absolute.
+  const rewrite = (attr, value) =>
+    attr.toLowerCase() === 'srcset' ? absolutiseSrcset(value, baseUrl) : absolutise(value, baseUrl);
+
   out = out.replace(
     /\s(href|src|srcset|poster)\s*=\s*"([^"]*)"/gi,
-    (whole, attr, value) => ` ${attr}="${absolutise(value, baseUrl)}"`
+    (_match, attr, value) => ` ${attr}="${rewrite(attr, value)}"`
   );
   out = out.replace(
     /\s(href|src|srcset|poster)\s*=\s*'([^']*)'/gi,
-    (whole, attr, value) => ` ${attr}='${absolutise(value, baseUrl)}'`
+    (_match, attr, value) => ` ${attr}='${rewrite(attr, value)}'`
   );
 
   return out;

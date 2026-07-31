@@ -869,9 +869,14 @@ export function sanitiseForAnalysis(html, baseUrl) {
   out = out.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
 
   // Every event-handler attribute, quoted or bare, any case.
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*"[^"]*"/gi, '');
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*'[^']*'/gi, '');
-  out = out.replace(/\son[a-z0-9_-]*\s*=\s*[^\s>]+/gi, '');
+  //
+  // The separator class is [\s/]+ not \s+ because HTML accepts a solidus
+  // between attributes: after a quoted value, and directly after the tag name.
+  // Requiring whitespace let <img src="x.png"/onerror="..."> through, and it
+  // fired — four variants verified in Chrome.
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*"[^"]*"/gi, ' ');
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*'[^']*'/gi, ' ');
+  out = out.replace(/[\s/]+on[a-z0-9_-]*\s*=\s*[^\s>]+/gi, ' ');
 
   // Script-bearing URLs, keeping the element so axe still evaluates it.
   out = out.replace(

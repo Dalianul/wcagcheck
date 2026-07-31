@@ -24,6 +24,29 @@ describe('sanitiseForAnalysis — things that execute', () => {
     expect(out).not.toMatch(/on[a-z]+\s*=/i);
   });
 
+  // Regression: the separator class was \s, but HTML also accepts a solidus
+  // between attributes. Every one of these fired in Chrome before the fix.
+  it('removes a handler separated by a solidus after a quoted value', () => {
+    const out = sanitiseForAnalysis('<img src="x.png"/onerror="window.f=1" alt="a">', base);
+    expect(out).not.toMatch(/onerror/i);
+    expect(out).toMatch(/alt="a"/);
+  });
+
+  it('removes a handler separated by a solidus with an unquoted value', () => {
+    const out = sanitiseForAnalysis('<img src="x.png"/onerror=window.f=1 alt="a">', base);
+    expect(out).not.toMatch(/onerror/i);
+  });
+
+  it('removes a handler placed directly after the tag name', () => {
+    const out = sanitiseForAnalysis('<img/onerror="window.f=1" src="x.png" alt="a">', base);
+    expect(out).not.toMatch(/onerror/i);
+  });
+
+  it('removes a solidus-separated handler after a single-quoted value', () => {
+    const out = sanitiseForAnalysis("<img src='x.png'/onerror='window.f=1' alt='a'>", base);
+    expect(out).not.toMatch(/onerror/i);
+  });
+
   it('removes javascript: urls but keeps the element', () => {
     const out = sanitiseForAnalysis('<a href="javascript:alert(1)">click</a>', base);
     expect(out).not.toMatch(/javascript:/i);
@@ -74,6 +97,15 @@ describe('sanitiseForAnalysis — url resolution', () => {
     );
     expect(out).toContain('https://example.com/css/main.css');
     expect(out).toContain('https://example.com/img/a.png');
+  });
+
+  // Regression: the whole list was handed to the single-URL resolver, which
+  // percent-encoded the spaces and commas into one bogus URL.
+  it('absolutises each srcset candidate and keeps its descriptor', () => {
+    const out = sanitiseForAnalysis('<img srcset="a.png 1x, sub/b.png 2x" alt="a">', base);
+    expect(out).toContain('https://example.com/shop/a.png 1x');
+    expect(out).toContain('https://example.com/shop/sub/b.png 2x');
+    expect(out).not.toContain('%20');
   });
 
   it('leaves absolute and data urls alone', () => {
