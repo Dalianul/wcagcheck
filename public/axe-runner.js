@@ -61,7 +61,13 @@ function buildFrame(html, finalUrl) {
   document.body.append(frame);
 
   return new Promise((resolve, reject) => {
-    const failed = setTimeout(() => reject(new Error('The page took too long to render for analysis.')), 20000);
+    // The frame is already in the DOM at this point, and the caller's
+    // try/finally only starts once this promise resolves. So a frame that never
+    // fires load has to clean up after itself here, or it is orphaned.
+    const failed = setTimeout(() => {
+      frame.remove();
+      reject(new Error('The page took too long to render for analysis.'));
+    }, 20000);
     frame.addEventListener('load', () => {
       clearTimeout(failed);
       resolve(frame);
