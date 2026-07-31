@@ -1074,6 +1074,26 @@ And in the "Static analysis only" explainer paragraph, replace its text with:
           JavaScript is not analysed.
 ```
 
+- [ ] **Step 4b: Satisfy the MPL-2.0 attribution requirement**
+
+The Global Constraints require linking to the upstream source of the vendored
+axe-core. Nothing else in this plan does it, so it happens here.
+
+In `public/index.html`, inside the `<footer class="foot">` block, add this line
+directly after the existing `<p>References: …</p>` paragraph:
+
+```html
+    <p>Analysis by <a href="https://github.com/dequelabs/axe-core">axe-core</a> 4.12.1, &copy; Deque Systems, used under the <a href="https://www.mozilla.org/en-US/MPL/2.0/">Mozilla Public License 2.0</a>. Source: <a href="https://github.com/dequelabs/axe-core">github.com/dequelabs/axe-core</a>.</p>
+```
+
+Verify the licence file we ship is reachable:
+
+```bash
+curl -s -o /dev/null -w "licence: %{http_code}\n" http://127.0.0.1:8788/vendor/LICENSE-axe-core.txt
+```
+
+Expected: `200`.
+
 - [ ] **Step 5: Verify in the browser and re-check Lighthouse**
 
 ```bash
