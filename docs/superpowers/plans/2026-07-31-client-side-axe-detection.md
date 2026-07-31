@@ -302,23 +302,39 @@ The single most fragile assumption is that a level tag like `wcag21aa` is not
 mistaken for a criterion. What actually protects that is the **`$` anchor**, not
 the `+` quantifier — verified before writing this step:
 
+Measured against the real tag set, not reasoned about — **both single-change
+mutations are no-ops, and only the combined one bites:**
+
 | Pattern | Matches |
 |---|---|
-| `^wcag(\d)(\d)(\d+)$` (shipped) | `wcag111`, `wcag1410` |
-| `^wcag(\d)(\d)(\d*)$` | `wcag111`, `wcag1410` — *identical, so mutating `+`→`*` proves nothing* |
-| `^wcag(\d)(\d)(\d*)` (no anchor) | `wcag21aa`, `wcag22aa`, `wcag111`, `wcag1410` |
+| `^wcag(\d)(\d)(\d+)$` — shipped | `wcag111`, `wcag1410` |
+| `^wcag(\d)(\d)(\d+)` — drop anchor only | `wcag111`, `wcag1410` — *no-op* |
+| `^wcag(\d)(\d)(\d*)$` — quantifier only | `wcag111`, `wcag1410` — *no-op* |
+| `^wcag(\d)(\d)(\d*)` — **both** | `wcag21aa`, `wcag22aa`, `wcag111`, `wcag1410` |
 
-So mutate the anchor. Back up the file, remove the trailing `$` from
-`CRITERION_TAG`, and run:
+The reason both single changes fail to break anything: `wcag21aa` ends in
+letters, so the second `(\d)` plus either the `$` anchor or the `+` quantifier
+is enough to reject it on its own. Only removing *both* guards lets `(\d*)`
+match zero digits and the pattern stop before `aa`.
+
+So apply both changes together. Back up, edit, run:
 
 ```bash
 cp public/en301549.js /tmp/en.bak.js
-# edit public/en301549.js: change /^wcag(\d)(\d)(\d+)$/ to /^wcag(\d)(\d)(\d+)/
+# in public/en301549.js change
+#   /^wcag(\d)(\d)(\d+)$/   to   /^wcag(\d)(\d)(\d*)/
 npx vitest run test/en301549.test.js
 ```
 
 Expected: FAIL on "returns null when only level tags are present", because
 `wcag21aa` now yields the malformed criterion `2.1.`.
+
+Restore and confirm green:
+
+```bash
+cp /tmp/en.bak.js public/en301549.js
+npx vitest run test/en301549.test.js
+```
 
 Restore and confirm green:
 
@@ -429,8 +445,10 @@ describe('handleFetchHtml', () => {
   it('describes a 511 as a block, not an origin error', async () => {
     servePage('', { status: 511 });
     const res = await handleFetchHtml(url('https://example.com/'));
-    expect((await res.json()).error).toMatch(/blocking|refuses/i);
-    expect((await res.json()).error).not.toMatch(/itself is erroring/i);
+    // Read the body once — a Response body cannot be consumed twice.
+    const { error } = await res.json();
+    expect(error).toMatch(/blocking|refuses/i);
+    expect(error).not.toMatch(/itself is erroring/i);
   });
 });
 ```
