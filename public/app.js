@@ -44,7 +44,7 @@ function renderScope(scope, truncated) {
   if (truncated) {
     box.append(el('p', null, 'The page was larger than 2.5 MB, so only the first part was read.'));
   }
-  box.append(el('p', null, 'Not covered by a static check:'));
+  box.append(el('p', null, 'Not covered by this check:'));
   const list = el('ul');
   for (const item of scope.notCovered) list.append(el('li', null, item));
   box.append(list);
@@ -59,9 +59,18 @@ const DOCUMENT_LEVEL_RULES = new Set([
 function renderMerged(axeResult, staticResult, requested) {
   results.replaceChildren();
 
-  const documentFindings = (staticResult?.issues ?? []).filter((i) => DOCUMENT_LEVEL_RULES.has(i.id));
+  const axeRan = Boolean(axeResult);
+
+  // While axe is running, only the document-level rules are taken from the
+  // static scan — the other sixteen overlap with axe rules and would report the
+  // same problem twice under two names. When axe could not run there is nothing
+  // to double-report against, so every static finding is shown instead of
+  // throwing away sixteen rules' worth of real results.
+  const staticFindings = (staticResult?.issues ?? []).filter(
+    (i) => !axeRan || DOCUMENT_LEVEL_RULES.has(i.id)
+  );
   const requirements = [
-    ...documentFindings.map((i) => ({
+    ...staticFindings.map((i) => ({
       id: i.id, help: i.title, helpUrl: null, impact: i.impact,
       wcag: i.wcag, en301549: i.en301549, level: i.wcagLevel,
       nodes: i.count, examples: i.examples ?? [],
@@ -80,12 +89,17 @@ function renderMerged(axeResult, staticResult, requested) {
   subject.append(el('p', 'tally__url', axeResult?.finalUrl || staticResult?.url || requested));
   tally.append(subject);
 
-  if (requirements.length === 0 && incomplete.length === 0) {
+  // A clean zero is only honest when both engines actually ran. If the
+  // in-browser engine failed, roughly 95 of the checks never happened, and a
+  // green "0 issues found" would read as a pass — the most damaging thing this
+  // tool could get wrong.
+  if (requirements.length === 0 && incomplete.length === 0 && axeRan) {
     tally.append(figure('0', 'issues found', 'clear'));
   } else {
     if (requirements.length) tally.append(figure(requirements.length, 'requirement failures', 'serious'));
     if (bestPractices.length) tally.append(figure(bestPractices.length, 'best practice', 'minor'));
     if (incomplete.length) tally.append(figure(incomplete.length, 'needs review', 'moderate'));
+    if (!axeRan) tally.append(figure('—', 'element checks did not run', 'moderate'));
   }
   results.append(tally);
 
