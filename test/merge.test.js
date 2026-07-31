@@ -241,6 +241,17 @@ describe('what the report says it did not check', () => {
     expect(merged.scope.notCovered.join(' ')).toMatch(/below the area that fits on screen/i);
   });
 
+  // A phone and a laptop render the same site to different layouts, so a
+  // contrast verdict only means something next to the width it was taken at.
+  it('states the width the page was measured at', () => {
+    const merged = mergeResults(
+      axeResult({ contrastScope: 'visible-area', renderedWidth: 390 }),
+      staticResult([]),
+      'x.com'
+    );
+    expect(merged.scope.notCovered.join(' ')).toMatch(/measured at 390px wide/);
+  });
+
   it('says contrast was not measured at all when axe never evaluated it', () => {
     const merged = mergeResults(axeResult({ contrastScope: 'not-assessed' }), staticResult([]), 'x.com');
     expect(merged.scope.notCovered.join(' ')).toMatch(/could not be measured/i);

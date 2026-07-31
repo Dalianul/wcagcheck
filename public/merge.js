@@ -141,7 +141,11 @@ function notCovered(axeResult, staticResult) {
   } else if (axeResult.contrastScope !== 'visible-area') {
     items.unshift('Colour contrast — it could not be measured on this page');
   } else {
-    items.unshift('Colour contrast below the area that fits on screen');
+    items.unshift(
+      axeResult.renderedWidth
+        ? `Colour contrast below the area that fits on screen, measured at ${axeResult.renderedWidth}px wide`
+        : 'Colour contrast below the area that fits on screen'
+    );
   }
   if (!staticResult) items.unshift('Page-level checks such as title and language');
   return items;

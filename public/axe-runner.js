@@ -61,22 +61,45 @@ function loadAxe() {
  * page's content is exposed to assistive technology on our own page. The results
  * region is an aria-live region and announces the scan, and the stage is removed
  * as soon as axe returns.
+ *
+ * It carries a banner because without one it is indistinguishable from having
+ * navigated to the scanned site: the address bar says wcagcheck.eu and the
+ * screen is somebody else's homepage. The banner is our own markup and sits
+ * outside the element axe is given, so it is never part of the results.
  */
 function buildStage(html, finalUrl) {
+  // Render at the viewport's own width rather than a fixed 1280. Contrast is
+  // only judged for what is genuinely inside the viewport, so on a phone a
+  // 1280px stage measured the left quarter of a desktop layout and clipped the
+  // rest off screen. Matching the viewport renders the layout the visitor's own
+  // device would get, entirely visible, which is both more coverage and a more
+  // relevant answer.
+  const width = Math.min(STAGE_WIDTH, document.documentElement.clientWidth);
+
   const stage = document.createElement('div');
   stage.dataset.role = 'analysis-stage';
   stage.style.cssText =
     'position:fixed;top:0;left:0;z-index:9998;' +
-    `width:min(${STAGE_WIDTH}px,100vw);height:100vh;overflow:hidden;` +
-    'background:#fff;opacity:1;pointer-events:none;';
+    'width:100vw;height:100vh;overflow:hidden;' +
+    'background:#fff;opacity:1;pointer-events:none;' +
+    'display:flex;flex-direction:column;';
+
+  const banner = document.createElement('p');
+  banner.style.cssText =
+    'flex:0 0 auto;margin:0;padding:0.625rem 1rem;background:#12203a;color:#fbfbf9;' +
+    'font:600 0.8125rem/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;';
+  let host_name = finalUrl;
+  try { host_name = new URL(finalUrl).hostname; } catch { /* keep the raw value */ }
+  banner.textContent = `Measuring colour contrast on ${host_name} — rendering it here, not visiting it`;
 
   const host = document.createElement('div');
-  host.style.cssText = `width:${STAGE_WIDTH}px;`;
-  stage.append(host);
+  host.style.cssText = `width:${width}px;flex:1 1 auto;overflow:hidden;`;
+
+  stage.append(banner, host);
   document.body.append(stage);
 
   host.attachShadow({ mode: 'open' }).innerHTML = sanitiseForAnalysis(html, finalUrl);
-  return { stage, host };
+  return { stage, host, width };
 }
 
 function toFinding(result) {
@@ -107,7 +130,7 @@ export async function runAxeScan(target) {
   if (!response.ok) throw new Error(payload.error || 'That page could not be fetched.');
 
   const axe = await loadAxe();
-  const { stage, host } = buildStage(payload.html, payload.finalUrl);
+  const { stage, host, width } = buildStage(payload.html, payload.finalUrl);
 
   try {
     // Let the target's stylesheets settle, or contrast reads an unstyled page.
@@ -145,6 +168,10 @@ export async function runAxeScan(target) {
       engine: AXE_VERSION,
       truncated: Boolean(payload.truncated),
       contrastScope: contrastEvaluated ? 'visible-area' : 'not-assessed',
+      // The layout the page was measured at. A phone and a laptop see different
+      // layouts of the same site, so a contrast result is only meaningful
+      // alongside the width it was taken at.
+      renderedWidth: width,
       byCriterion,
       requirements: violations.filter((f) => f.en301549),
       // A genuine WCAG 2.2 failure with no clause in the version in force is
