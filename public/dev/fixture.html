@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>axe verification fixture</title>
+<style>
+  .low-contrast { color: #999999; background: #ffffff; }
+</style>
+</head>
+<body>
+  <!-- expect: html-has-lang (no lang attribute above) -->
+  <!-- expect: image-alt -->
+  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+  <!-- expect: link-name -->
+  <a href="/somewhere"></a>
+  <!-- expect: button-name -->
+  <button></button>
+  <!-- expect: label -->
+  <input type="text" name="unlabelled">
+  <!-- expect: color-contrast -->
+  <p class="low-contrast">This grey text on white fails AA contrast.</p>
+  <!-- expect: heading-order -->
+  <h1>One</h1>
+  <h4>Four, skipping two and three</h4>
+  <!-- expect: duplicate-id or landmark rules may also fire; that is fine -->
+  <div id="dup">a</div>
+  <div id="dup">b</div>
+</body>
+</html>
