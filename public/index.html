@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WCAG Check — test your site against the European Accessibility Act</title>
+<meta name="description" content="Free accessibility check for EU websites. Scans a page against WCAG 2.2 criteria and reports each issue with its EN 301 549 clause — the standard the European Accessibility Act refers to. No signup.">
+<link rel="canonical" href="https://wcagcheck.eu/">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="shell bar__inner">
+    <span class="bar__mark">wcagcheck.eu</span>
+    <span class="bar__standard">EN 301 549 &middot; WCAG 2.2 &middot; Level A/AA</span>
+  </div>
+</header>
+
+<main id="main">
+  <section class="shell hero">
+    <p class="hero__eyebrow">European Accessibility Act &middot; in force since 28 June 2025</p>
+    <h1 class="hero__title">Does your website meet the European Accessibility Act?</h1>
+    <p class="hero__lede">
+      Paste a page address. You get a list of the accessibility problems on it, each
+      one tied to the specific clause of EN&nbsp;301&nbsp;549 that the Act refers to —
+      so you know what the law actually requires, not just a score.
+    </p>
+
+    <form id="scan-form" novalidate>
+      <label class="hero__eyebrow" for="url">Page to check</label>
+      <div class="probe">
+        <input
+          class="probe__field"
+          id="url"
+          name="url"
+          type="url"
+          inputmode="url"
+          autocomplete="url"
+          spellcheck="false"
+          placeholder="https://example.ro/contact"
+          required
+        >
+        <button class="probe__go" id="go" type="submit">Scan</button>
+      </div>
+      <div class="sweep" id="sweep" hidden><span class="sweep__bead"></span></div>
+      <p class="probe__note">20 checks &middot; no signup &middot; nothing stored</p>
+    </form>
+
+    <div id="message" role="alert"></div>
+  </section>
+
+  <section class="shell results" id="results" aria-live="polite" aria-busy="false"></section>
+
+  <section class="shell explain">
+    <h2>What this checks, and what it can't</h2>
+    <div class="explain__grid">
+      <div>
+        <h3>Why EN 301 549 and not just WCAG</h3>
+        <p>
+          The Accessibility Act doesn't name WCAG directly. It points at the European
+          standard EN&nbsp;301&nbsp;549, whose clause&nbsp;9 restates the WCAG Level A and
+          AA criteria for websites. Every finding here shows both references.
+        </p>
+      </div>
+      <div>
+        <h3>Static analysis only</h3>
+        <p>
+          This reads your page's HTML. That catches missing alt text, unlabelled form
+          fields, broken heading order and disabled zoom. It cannot judge colour
+          contrast or keyboard traps, which need a real browser to measure.
+        </p>
+      </div>
+      <div>
+        <h3>Not a legal audit</h3>
+        <p>
+          A clean result here means the machine-detectable problems are gone. Roughly
+          a third of accessibility requirements need a human to assess. Treat this as
+          triage that tells you where to start.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p>wcagcheck.eu &mdash; a free tool. No account, no tracking of the sites you test.</p>
+    <p>References: <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a> &middot; <a href="https://www.etsi.org/deliver/etsi_en/301500_301599/301549/">EN 301 549</a></p>
+  </div>
+</footer>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
