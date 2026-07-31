@@ -25,14 +25,13 @@
   # that contrast checking requires, so tightening this buys nothing real.
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: https: http:; media-src 'self' https: http:; connect-src 'self' https: http:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
-# Version-pinned and 572 KB. Without this it revalidates on every single scan,
-# because the assets runtime defaults to max-age=0, must-revalidate.
+# 572 KB, and the version is in the filename, so this URL's content genuinely
+# never changes — which is what immutable promises. Without it the bundle
+# revalidates on every single scan, since the assets runtime defaults to
+# max-age=0, must-revalidate.
+#
+# Bumping axe means a new filename. Never point this at an unversioned path:
+# the promise would be false and returning visitors would be stuck on a
+# year-old engine.
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable
-
-# Fingerprint-free filenames, so they cannot be cached immutably — but a day of
-# freshness beats a round trip on every page view.
-/styles.css
-  Cache-Control: public, max-age=86400
-/favicon.svg
-  Cache-Control: public, max-age=86400

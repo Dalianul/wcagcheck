@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sync:axe": "mkdir -p public/vendor && cp node_modules/axe-core/axe.min.js public/vendor/axe.min.js && cp node_modules/axe-core/LICENSE public/vendor/LICENSE-axe-core.txt"
+    "sync:axe": "mkdir -p public/vendor && cp node_modules/axe-core/axe.min.js public/vendor/axe-$(node -p \"require('axe-core/package.json').version\").min.js && cp node_modules/axe-core/LICENSE public/vendor/LICENSE-axe-core.txt && echo 'Now update AXE_URL and AXE_VERSION in public/axe-runner.js, and delete the old vendored file.'"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.20.0",

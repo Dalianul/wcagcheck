@@ -79,7 +79,24 @@ function renderMerged(axeResult, staticResult, requested) {
 
   results.append(renderConformance(merged.conformance));
   results.append(renderScope(merged.scope, merged.truncated));
+
+  // Only meaningful on paper, where the surrounding page is gone and the sheet
+  // has to say for itself what it is and when it was made.
+  const stamp = el('p', 'print-only report__stamp',
+    `Automated check by wcagcheck.eu · ${new Date().toLocaleString('en-GB', {
+      dateStyle: 'long', timeStyle: 'short',
+    })} · not a conformance audit`);
+  results.append(stamp);
 }
+
+// A closed <details> cannot be opened by CSS, so the conformance table would
+// print as a one-line summary — the most valuable part of the report, missing.
+window.addEventListener('beforeprint', () => {
+  for (const d of document.querySelectorAll('details')) d.dataset.wasOpen = String(d.open), (d.open = true);
+});
+window.addEventListener('afterprint', () => {
+  for (const d of document.querySelectorAll('details')) d.open = d.dataset.wasOpen === 'true';
+});
 
 const STATUS_LABEL = {
   'does-not-support': 'Does not support',
@@ -198,6 +215,9 @@ function renderAxeEntry(finding, severity) {
   return entry;
 }
 
+const belowResults = [...document.querySelectorAll('.explain, .foot')];
+let reservedForDeepLink = false;
+
 function setBusy(busy) {
   go.disabled = busy;
   go.textContent = busy ? 'Scanning' : 'Scan';
@@ -247,6 +267,12 @@ form.addEventListener('submit', async (event) => {
     showMessage('The scan could not be completed', 'Check your connection and try again.');
   } finally {
     setBusy(false);
+    // Restored once the report is on the page, by which point it has pushed
+    // them well below the fold anyway.
+    if (reservedForDeepLink) {
+      reservedForDeepLink = false;
+      for (const below of belowResults) below.hidden = false;
+    }
   }
 });
 
@@ -254,5 +280,18 @@ form.addEventListener('submit', async (event) => {
 const preset = new URLSearchParams(location.search).get('url');
 if (preset) {
   field.value = preset;
+  // A scan the visitor did not click starts a layout shift that counts against
+  // the page: findings drop in and shove the explainer and footer down. Layout
+  // shift is only scored for elements inside the viewport, so reserving the
+  // space up front pushes those two below the fold before anything moves, and
+  // the fill-in happens in space that was already claimed.
+  // A scan the visitor did not click shoves everything below the findings down
+  // as they arrive, which is scored against the page as layout shift. Taking
+  // the explainer and footer out of flow first means the findings grow into
+  // empty space with nothing beneath them to move. Hiding them costs nothing:
+  // both sit below the fold at this point, and only shifts inside the viewport
+  // are scored.
+  reservedForDeepLink = true;
+  for (const below of belowResults) below.hidden = true;
   form.requestSubmit();
 }

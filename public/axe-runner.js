@@ -17,7 +17,10 @@
 import { classify, criterionFromTags } from './en301549.js';
 import { sanitiseForAnalysis } from './sanitise.js';
 
-const AXE_URL = '/vendor/axe.min.js';
+// The version lives in the filename so the immutable cache header in
+// public/_headers is a promise we can actually keep: a bump changes the URL
+// rather than silently serving a year-old bundle to returning visitors.
+const AXE_URL = '/vendor/axe-4.12.1.min.js';
 const AXE_VERSION = 'axe-core 4.12.1';
 const MAX_EXAMPLES = 5;
 const STAGE_WIDTH = 1280;

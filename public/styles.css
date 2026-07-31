@@ -531,6 +531,97 @@ body {
   color: var(--ink);
 }
 
+.print-only {
+  display: none;
+}
+
+/* ─── Print: the browser's Save as PDF is the report generator ──
+   No server-side PDF, no library. What comes out is the findings and the full
+   requirement table, and nothing that only makes sense on a screen. */
+
+@media print {
+  .bar,
+  .foot,
+  .explain,
+  #scan-form,
+  #message,
+  .skip {
+    display: none;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+  }
+
+  .shell {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .hero {
+    padding-block: 0 1rem;
+  }
+  .hero__title {
+    font-size: 20pt;
+  }
+  .hero__lede,
+  .hero__eyebrow {
+    display: none;
+  }
+
+  .results {
+    padding-bottom: 0;
+  }
+
+  /* A finding split across a page break is unreadable as evidence. */
+  .entry,
+  .conformance__row {
+    break-inside: avoid;
+  }
+
+  .conformance__scroll {
+    overflow-x: visible;
+  }
+  .conformance__table {
+    font-size: 9pt;
+  }
+  /* Repeat the column headers on every sheet the table spills onto. */
+  .conformance__table thead {
+    display: table-header-group;
+  }
+  .conformance__summary {
+    cursor: auto;
+    list-style: none;
+  }
+  .conformance__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .entry__samples li,
+  .notice,
+  .scope {
+    background: transparent;
+  }
+
+  .report__stamp {
+    margin-top: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #000;
+    font-family: var(--mono);
+    font-size: 8pt;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+}
+
 @media (max-width: 34rem) {
   .probe {
     grid-template-columns: 1fr;
