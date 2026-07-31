@@ -2,35 +2,41 @@
 
 > A free tool that checks whether a web page meets the accessibility requirements of the European Accessibility Act. It reports each problem against both its WCAG 2.2 success criterion and the corresponding EN 301 549 clause 9 reference, which is the standard the Act actually cites.
 
-Enter a page URL and the tool fetches its HTML and runs 20 checks that can be
-determined without a browser. Results are generated per request; nothing about a
-scanned site is stored, and no account is needed.
+Enter a page URL and two engines run against it: about 95 axe-core rules in your own
+browser, and 20 static HTML rules on the server. Results are generated per request;
+nothing about a scanned site is stored, and no account is needed.
 
 ## What it detects
 
-- Images: missing alt text, alt text that is only a filename, image buttons and image map areas without alt
-- Structure: no h1, skipped heading levels, no main landmark
-- Forms: fields with no associated label
-- Links and buttons: no accessible name, non-descriptive link text
-- Document: missing title, missing lang attribute, duplicate id values, positive tabindex
-- Media: video or audio without captions, media that autoplays
-- Zoom: a viewport meta tag that prevents zooming
-- Tables: data tables without header cells
-- Frames: iframe without a title
+- Colour contrast, for the part of the page that fits on screen
+- Element-level problems across roughly 95 axe-core rules covering WCAG 2.2 Level A
+  and AA: accessible names, ARIA validity, form labelling, landmark structure,
+  heading order, list semantics, table headers, frame titles and more
+- Page-level problems the element scan cannot see: missing title, missing lang
+  attribute, no h1, no main landmark
+
+Findings that map to a WCAG success criterion are reported as EN 301 549
+requirements. Rules that are only best practice are reported separately, so a
+compliance count is never inflated by things the law does not require. Results the
+engine could not decide are shown as needing review and are never counted as passes.
 
 ## What it cannot detect
 
-Because the analysis is static and executes no JavaScript, these are out of scope
-and are stated as such on the page:
+- Content built by JavaScript. Scripts on the scanned page are never executed. This
+  is a deliberate security decision rather than a gap to be fixed
+- Colour contrast below the area that fits on screen. Contrast can only be judged
+  for content genuinely rendered in the viewport
+- The roughly two thirds of WCAG criteria that require human judgement
 
-- Colour contrast, which requires rendered styles
-- Keyboard traps and focus order, which require a real browser
-- Content injected by JavaScript
-- The quality of video audio descriptions
-
-Roughly a third of accessibility requirements need human judgement. A clean
-result means the machine-detectable problems are gone, not that a site is
+A clean result means the machine-detectable problems are gone, not that a site is
 compliant.
+
+## Limits worth knowing
+
+Some sites reject automated requests at their gateway (HTTP 403, 429 or 511). Those
+cannot be checked from here and the tool says so plainly rather than reporting the
+site as broken. Roughly 40% of large retail sites fall into this category; small
+business sites far less often.
 
 ## Pages
 
@@ -40,3 +46,4 @@ compliant.
 
 - [WCAG 2.2](https://www.w3.org/TR/WCAG22/): the W3C accessibility guidelines
 - [EN 301 549](https://www.etsi.org/deliver/etsi_en/301500_301599/301549/): the European standard whose clause 9 restates WCAG Level A and AA for websites
+- [axe-core](https://github.com/dequelabs/axe-core): the analysis engine, MPL-2.0, used unmodified
