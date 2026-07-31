@@ -4,5 +4,7 @@ Allow: /
 # The scan endpoint takes a URL parameter, so crawling it produces infinite
 # duplicate work for no indexable content.
 Disallow: /api/
+Disallow: /vendor/
+Disallow: /dev/
 
 Sitemap: https://wcagcheck.eu/sitemap.xml
