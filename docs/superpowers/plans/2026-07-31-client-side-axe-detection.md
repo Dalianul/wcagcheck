@@ -1495,6 +1495,192 @@ axe loads only on scan, keeping Lighthouse at 100."
 
 ---
 
+### Task 5R: Wire it in, merging both engines (supersedes Task 5)
+
+Task 5 treated the static scan as a fallback. That would lose coverage, so it
+becomes a peer instead.
+
+**Why both are needed.** axe runs against a shadow root, which has no `<html>`
+or `<head>`, so document-level rules cannot apply — verified: scanning a page
+with no `lang` attribute produces no `html-has-lang` finding. The four static
+rules `missing-title`, `html-missing-lang`, `no-h1` and `no-main-landmark` cover
+exactly that blind spot. Shipping axe alone would silently drop four checks the
+live site already performs.
+
+So a scan calls **both** and merges: `/api/scan` for document-level rules,
+client-side axe for everything else.
+
+**Files:** modify `public/app.js`, `public/index.html`
+
+**Interfaces:**
+- Consumes: `runAxeScan` from `public/axe-runner.js`; `GET /api/scan`
+- Produces: no new exports
+
+- [ ] **Step 1: Make `app.js` a module**
+
+In `public/index.html` change `<script src="/app.js" defer></script>` to
+`<script src="/app.js" type="module"></script>`.
+
+- [ ] **Step 2: Run both engines and merge**
+
+In `public/app.js`, import at the top:
+
+```javascript
+import { runAxeScan } from './axe-runner.js';
+```
+
+Replace the body of the submit handler's `try` block with:
+
+```javascript
+    // Both engines run: axe cannot see document-level rules inside a shadow
+    // root, and the static scan covers exactly those. Neither is a fallback.
+    const [axeOutcome, staticOutcome] = await Promise.allSettled([
+      runAxeScan(value),
+      fetch(`/api/scan?url=${encodeURIComponent(value)}`).then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || 'Static scan failed.');
+        return body;
+      }),
+    ]);
+
+    if (axeOutcome.status === 'rejected' && staticOutcome.status === 'rejected') {
+      results.replaceChildren();
+      showMessage("That page couldn't be scanned", axeOutcome.reason.message);
+      return;
+    }
+
+    renderMerged(
+      axeOutcome.status === 'fulfilled' ? axeOutcome.value : null,
+      staticOutcome.status === 'fulfilled' ? staticOutcome.value : null,
+      value
+    );
+    results.tabIndex = -1;
+    results.focus();
+```
+
+- [ ] **Step 3: Add `renderMerged` above the submit handler**
+
+Only the document-level static rules are merged in; the rest overlap with axe
+and would double-report.
+
+```javascript
+/** The four static rules axe cannot evaluate inside a shadow root. */
+const DOCUMENT_LEVEL_RULES = new Set([
+  'missing-title', 'html-missing-lang', 'no-h1', 'no-main-landmark',
+]);
+
+function renderMerged(axeResult, staticResult, requested) {
+  results.replaceChildren();
+
+  const documentFindings = (staticResult?.issues ?? []).filter((i) => DOCUMENT_LEVEL_RULES.has(i.id));
+  const requirements = [
+    ...documentFindings.map((i) => ({
+      id: i.id, help: i.title, helpUrl: null, impact: i.impact,
+      wcag: i.wcag, en301549: i.en301549, level: i.wcagLevel,
+      nodes: i.count, examples: i.examples ?? [],
+    })),
+    ...(axeResult?.requirements ?? []),
+  ];
+  const bestPractices = axeResult?.bestPractices ?? [];
+  const incomplete = axeResult?.incomplete ?? [];
+
+  const tally = el('div', 'tally');
+  const subject = el('div', 'tally__subject');
+  const heading = el('h2', 'entry__title');
+  heading.append(el('span', 'visually-hidden', 'Results for '));
+  heading.append(document.createTextNode(staticResult?.pageTitle || axeResult?.finalUrl || requested));
+  subject.append(heading);
+  subject.append(el('p', 'tally__url', axeResult?.finalUrl || staticResult?.url || requested));
+  tally.append(subject);
+
+  if (requirements.length === 0 && incomplete.length === 0) {
+    tally.append(figure('0', 'issues found', 'clear'));
+  } else {
+    if (requirements.length) tally.append(figure(requirements.length, 'requirement failures', 'serious'));
+    if (bestPractices.length) tally.append(figure(bestPractices.length, 'best practice', 'minor'));
+    if (incomplete.length) tally.append(figure(incomplete.length, 'needs review', 'moderate'));
+  }
+  results.append(tally);
+
+  for (const f of requirements) results.append(renderAxeEntry(f, 'serious'));
+  for (const f of bestPractices) results.append(renderAxeEntry(f, 'minor'));
+  for (const f of incomplete) results.append(renderAxeEntry(f, 'moderate'));
+
+  const notCovered = [
+    'Content built by JavaScript — scripts are never executed, by design',
+    'The roughly two thirds of WCAG criteria that need human judgement',
+  ];
+  if (!axeResult) notCovered.unshift('Element-level checks — the in-browser engine could not run on this page');
+  else if (axeResult.contrastScope !== 'visible-area') notCovered.unshift('Colour contrast — it could not be measured on this page');
+  else notCovered.unshift('Colour contrast below the area that fits on screen');
+  if (!staticResult) notCovered.unshift('Page-level checks such as title and language');
+
+  results.append(renderScope({
+    standard: axeResult ? `${axeResult.engine}, WCAG 2.2 A/AA plus best practices` : 'static HTML checks only',
+    mappedTo: 'EN 301 549 clause 9 (the standard the European Accessibility Act refers to)',
+    notCovered,
+  }, Boolean(axeResult?.truncated || staticResult?.truncated)));
+}
+
+/** One finding as a ledger entry. */
+function renderAxeEntry(finding, severity) {
+  const entry = el('article', `entry entry--${severity}`);
+  const clause = el('p', 'entry__clause', finding.en301549 || finding.id);
+  if (finding.en301549) clause.setAttribute('aria-label', `EN 301 549 clause ${finding.en301549}`);
+  entry.append(clause);
+
+  const body = el('div', 'entry__body');
+  const head = el('div', 'entry__head');
+  head.append(el('h3', 'entry__title', finding.help));
+  head.append(el('p', 'entry__count', finding.nodes === 1 ? '1 element' : `${finding.nodes} elements`));
+  body.append(head);
+  body.append(el('p', 'entry__meta', [
+    finding.impact,
+    finding.wcag ? `WCAG ${finding.wcag}` : 'Best practice',
+    finding.level ? `Level ${finding.level}` : null,
+  ].filter(Boolean).join(' · ')));
+
+  if (finding.examples?.length) {
+    const list = el('ul', 'entry__samples');
+    for (const sample of finding.examples) list.append(el('li', null, sample));
+    body.append(list);
+  }
+  entry.append(body);
+  return entry;
+}
+```
+
+- [ ] **Step 4: Correct the on-page copy**
+
+Replace the probe note:
+
+```html
+        <p class="probe__note">95+ checks &middot; contrast on the visible area &middot; no signup</p>
+```
+
+Replace the "Static analysis only" explainer body:
+
+```html
+          Your browser renders the page and runs the axe-core engine against it
+          &mdash; the same engine used in most accessibility test suites. Scripts
+          are never executed, so content built by JavaScript is not analysed, and
+          colour contrast is judged only for the part of the page that fits on
+          screen.
+```
+
+- [ ] **Step 5: MPL attribution** — as Task 5 Step 4b specifies.
+
+- [ ] **Step 6: Verify and commit**
+
+```bash
+node --check public/app.js
+npx vitest run
+```
+
+Controller performs the browser and Lighthouse verification.
+
+---
+
 ## Task 4R runner source
 
 The complete `public/axe-runner.js` referenced by Task 4R Step 7:
