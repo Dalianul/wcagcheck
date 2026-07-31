@@ -517,6 +517,39 @@ body {
   color: var(--ink-soft);
 }
 
+/* Internal links out of the homepage. The tool is the draw; these are the
+   reason to stay, and the only pages here that say something the rest of the
+   field gets wrong. */
+.guides {
+  margin-top: clamp(2.5rem, 6vw, 3.5rem);
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+}
+.guides h3 {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 1.25rem;
+}
+.guides ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1rem 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+.guides li {
+  color: var(--ink-soft);
+  max-width: 46ch;
+}
+.guides a {
+  color: var(--ink);
+  font-weight: 620;
+}
+
 .foot {
   border-top: 1px solid var(--rule);
   padding-block: 2rem 3rem;
@@ -529,6 +562,107 @@ body {
 }
 .foot a {
   color: var(--ink);
+}
+
+/* ─── Long-form pages ─────────────────────────────────────────── */
+
+.page {
+  padding-block: clamp(2.5rem, 7vw, 4.5rem) clamp(3rem, 8vw, 5rem);
+}
+
+.page__title {
+  font-size: clamp(1.875rem, 5vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 680;
+  margin: 0 0 1rem;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.page__lede {
+  font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
+  color: var(--ink-soft);
+  margin: 0 0 2.5rem;
+  max-width: 58ch;
+}
+
+/* One measure for everything readable, so the eye never has to re-find the
+   left edge between a paragraph and a list. */
+.prose {
+  max-width: 64ch;
+}
+.prose h2 {
+  font-size: 1.375rem;
+  letter-spacing: -0.015em;
+  margin: 2.5rem 0 0.75rem;
+}
+.prose p,
+.prose li {
+  margin: 0 0 1rem;
+}
+.prose ul,
+.prose ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+.prose li {
+  margin-bottom: 0.5rem;
+}
+.prose a {
+  color: var(--ink);
+}
+
+/* Quoted legislation. Set apart because on this site the distinction between
+   what the law says and what we say about it is the entire point. */
+.prose blockquote {
+  margin: 0 0 1.25rem;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 3px solid var(--rule-strong);
+}
+.prose blockquote p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.sources {
+  font-size: 0.9375rem;
+}
+
+.versions {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+}
+.versions th,
+.versions td {
+  text-align: left;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-top: 1px solid var(--rule);
+  vertical-align: top;
+}
+.versions thead th {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.versions tbody th {
+  font-family: var(--mono);
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 1.25rem;
+}
+
+.page__caveat {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
 }
 
 .print-only {

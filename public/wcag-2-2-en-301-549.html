@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WCAG 2.2 is not yet EN 301 549 — which standard actually applies</title>
+<meta name="description" content="The harmonised version of EN 301 549 restates WCAG 2.1, not 2.2. Six WCAG 2.2 criteria are real failures that are not yet EU legal requirements. Which they are, and what it means for you.">
+<link rel="canonical" href="https://wcagcheck.eu/wcag-2-2-en-301-549">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://wcagcheck.eu/wcag-2-2-en-301-549">
+<meta property="og:title" content="WCAG 2.2 is not yet EN 301 549">
+<meta property="og:description" content="The version of EN 301 549 cited in the Official Journal restates WCAG 2.1. Six WCAG 2.2 criteria are real failures that are not yet legal requirements.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does the European Accessibility Act require WCAG 2.2?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not today. The Act points at harmonised standards, and the version of EN 301 549 cited in the Official Journal is v3.2.1 from March 2021, whose clause 9 restates WCAG 2.1 Level A and AA. A newer version aligned to WCAG 2.2 exists as the V4.1.0 draft published in November 2025, but until it is cited it does not carry the presumption of conformity."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which WCAG 2.2 criteria are not yet EN 301 549 requirements?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Six Level A and AA criteria were added by WCAG 2.2 and have no clause in EN 301 549 v3.2.1: 2.4.11 Focus Not Obscured (Minimum), 2.5.7 Dragging Movements, 2.5.8 Target Size (Minimum), 3.2.6 Consistent Help, 3.3.7 Redundant Entry and 3.3.8 Accessible Authentication (Minimum). They are genuine accessibility failures and worth fixing, but they are not yet what the harmonised standard asks of you."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should I build to WCAG 2.1 then?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Build to WCAG 2.2. It is a superset of 2.1 for practical purposes, the alignment is coming, and the six extra criteria address real barriers. The distinction matters for how you describe your obligations and prioritise remediation, not for what you should aim at."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happened to WCAG 4.1.1 Parsing?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "WCAG 2.2 removed it, and W3C annotated it in WCAG 2.0 and 2.1 with a note that it should be considered as always satisfied for any content using HTML or XML. EN 301 549 v3.2.1 still contains clause 9.4.1.1 because it restates WCAG 2.1, but nothing can fail it. Problems that used to be reported under it now fall under 1.3.1 Info and Relationships or 4.1.2 Name, Role, Value."
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="shell bar__inner">
+    <a class="bar__mark" href="/">wcagcheck.eu</a>
+    <span class="bar__standard">EN 301 549 &middot; WCAG 2.2 &middot; Level A/AA</span>
+  </div>
+</header>
+
+<main id="main">
+  <article class="shell page">
+    <p class="hero__eyebrow">Standards &middot; which version binds you today</p>
+    <h1 class="page__title">WCAG 2.2 is not yet EN 301 549</h1>
+    <p class="page__lede">
+      Plenty of tools will tell you that every WCAG 2.2 failure is an EN&nbsp;301&nbsp;549
+      gap. Six of them are not, because the version of the standard actually cited in the
+      Official Journal restates WCAG&nbsp;2.1. The difference is small, entirely knowable,
+      and worth getting right if you are writing down what the law requires of you.
+    </p>
+
+    <div class="prose">
+      <h2>How the chain works</h2>
+      <p>
+        The European Accessibility Act does not name WCAG. It points at harmonised
+        standards, and conformance with one gives you a presumption of conformity with
+        the Act. For web content that standard is <strong>EN 301 549</strong>, whose
+        clause 9 restates the WCAG success criteria as numbered requirements &mdash;
+        WCAG 1.4.3 becomes clause 9.1.4.3, and so on.
+      </p>
+      <p>
+        So the question &ldquo;which WCAG applies&rdquo; is really the question
+        &ldquo;which version of EN 301 549 is cited&rdquo;.
+      </p>
+
+      <h2>Which version is cited</h2>
+      <table class="versions">
+        <caption class="visually-hidden">Versions of EN 301 549 and the WCAG version each restates</caption>
+        <thead>
+          <tr><th scope="col">Version</th><th scope="col">Restates</th><th scope="col">Requirements</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">v3.2.1</th><td>WCAG 2.1 A/AA</td><td>50</td><td>Cited in the Official Journal &mdash; in force</td></tr>
+          <tr><th scope="row">v4.1.1</th><td>WCAG 2.2 A/AA</td><td>55</td><td>Not yet cited &mdash; V4.1.0 draft, November 2025</td></tr>
+        </tbody>
+      </table>
+      <p>
+        v3.2.1 was published in March 2021. A newer version aligning clauses 9, 10 and
+        11 to WCAG 2.2 went out for public enquiry as draft V4.1.0 in November 2025.
+        Until the final version is cited, it does not carry the presumption of
+        conformity.
+      </p>
+      <p>
+        You will see October 2026 quoted as the expected citation date. Every source we
+        could find for that is secondary &mdash; vendor commentary rather than an EU
+        instrument &mdash; so treat it as a direction of travel and not a deadline.
+      </p>
+
+      <h2>The six criteria in the gap</h2>
+      <p>
+        WCAG 2.2 added six Level A and AA criteria. Each is a real barrier for real
+        people, and none of them currently has a clause in EN 301 549:
+      </p>
+      <table class="versions">
+        <caption class="visually-hidden">WCAG 2.2 Level A and AA criteria with no EN 301 549 v3.2.1 clause</caption>
+        <thead>
+          <tr><th scope="col">Criterion</th><th scope="col">Name</th><th scope="col">Level</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">2.4.11</th><td>Focus Not Obscured (Minimum)</td><td>AA</td></tr>
+          <tr><th scope="row">2.5.7</th><td>Dragging Movements</td><td>AA</td></tr>
+          <tr><th scope="row">2.5.8</th><td>Target Size (Minimum)</td><td>AA</td></tr>
+          <tr><th scope="row">3.2.6</th><td>Consistent Help</td><td>A</td></tr>
+          <tr><th scope="row">3.3.7</th><td>Redundant Entry</td><td>A</td></tr>
+          <tr><th scope="row">3.3.8</th><td>Accessible Authentication (Minimum)</td><td>AA</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Target Size is the one automated tools actually catch, which is why it is the
+        one most likely to be reported to you as an EN 301 549 failure. It is not one,
+        yet.
+      </p>
+
+      <h2>The criterion that runs the other way</h2>
+      <p>
+        <strong>4.1.1 Parsing</strong> is in WCAG 2.1, so EN 301 549 v3.2.1 contains
+        clause 9.4.1.1 &mdash; but WCAG 2.2 removed the criterion, and W3C annotated it
+        in 2.0 and 2.1 with a note that it should be considered as always satisfied for
+        any content using HTML or XML. Browsers and assistive technology stopped caring
+        about markup validity in the way the criterion assumed.
+      </p>
+      <p>
+        In practice this means the clause exists and cannot be failed. Problems that
+        used to be filed under it &mdash; a duplicate <code>id</code> breaking a label
+        association, say &mdash; belong under 1.3.1 Info and Relationships or 4.1.2
+        Name, Role, Value. A tool still reporting 4.1.1 failures is reporting against a
+        criterion W3C has retired.
+      </p>
+
+      <h2>So what should you build to?</h2>
+      <p>
+        WCAG 2.2. The alignment is coming, the six extra criteria address genuine
+        barriers, and nobody has ever been penalised for exceeding a standard. The
+        distinction matters for two narrower things: how you <em>describe</em> your
+        obligations in writing, and how you <em>prioritise</em> a backlog when you
+        cannot fix everything at once.
+      </p>
+      <p>
+        A failure of clause 9.1.4.3 is a failure of the standard the Act points at
+        today. A failure of WCAG 2.5.8 is a barrier you should fix that is not yet part
+        of that standard. Both are worth your time; only one of them is currently the
+        thing a regulator would measure you against.
+      </p>
+
+      <h2>How this tool handles it</h2>
+      <p>
+        Our <a href="/">free check</a> reports the two separately. Findings that map to
+        a clause of the version in force are listed as requirement failures with their
+        clause number. Findings against a WCAG 2.2 criterion with no clause yet are
+        listed under their criterion number and marked as not yet required, with a note
+        saying what they are waiting on. We never invent a clause number for a
+        requirement that does not exist &mdash; which is easy to do by accident, since
+        clause numbers are derived from criterion numbers.
+      </p>
+
+      <h2>Sources</h2>
+      <ul class="sources">
+        <li><a href="https://www.etsi.org/deliver/etsi_en/301500_301599/301549/">EN 301 549 at ETSI</a> &mdash; published versions and the V4.1.0 draft</li>
+        <li><a href="https://digital-strategy.ec.europa.eu/en/policies/web-accessibility-directive-standards-and-harmonisation">European Commission</a> &mdash; standards and harmonisation</li>
+        <li><a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a> and <a href="https://www.w3.org/TR/WCAG21/">WCAG 2.1</a> &mdash; the normative texts</li>
+        <li><a href="https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/">What&rsquo;s New in WCAG 2.2</a> &mdash; the additions and the removal of 4.1.1</li>
+      </ul>
+
+      <p class="page__caveat">
+        This page summarises the state of published standards at the time of writing.
+        Standards move; check the Official Journal before relying on which version is
+        cited.
+      </p>
+    </div>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p><a href="/">Run a free accessibility check</a> &middot; <a href="/accessibility-statement-eaa">What the EAA requires you to publish</a></p>
+    <p>wcagcheck.eu &mdash; a free tool. No account, no tracking of the sites you test.</p>
+  </div>
+</footer>
+</body>
+</html>

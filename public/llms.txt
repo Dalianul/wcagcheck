@@ -41,6 +41,10 @@ business sites far less often.
 ## Pages
 
 - [Home and scanner](https://wcagcheck.eu/): run a check and read the report
+- [The EAA does not require an accessibility statement](https://wcagcheck.eu/accessibility-statement-eaa): what Article 13 and Annex V of Directive (EU) 2019/882 actually require a service provider to publish, and why the widely circulated template belongs to the Web Accessibility Directive, which covers public sector bodies only
+- [WCAG 2.2 is not yet EN 301 549](https://wcagcheck.eu/wcag-2-2-en-301-549): the version cited in the Official Journal is v3.2.1, which restates WCAG 2.1, so six WCAG 2.2 Level A/AA criteria are genuine failures that are not yet legal requirements
+- [What an automated check can and cannot prove](https://wcagcheck.eu/automated-accessibility-testing): the boundary between machine-decidable requirements and the majority that need a person
+- [BFSG: Was Sie veröffentlichen müssen](https://wcagcheck.eu/de/bfsg): the German transposition, in German, including the fourth Anlage 3 element that names the competent market surveillance authority
 
 ## References
 

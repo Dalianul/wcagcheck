@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What an automated accessibility check can and cannot prove</title>
+<meta name="description" content="Automated testing finds roughly a third of accessibility problems. Which third, what it structurally cannot see, and why a clean scan is not compliance — with the reasons, not the marketing.">
+<link rel="canonical" href="https://wcagcheck.eu/automated-accessibility-testing">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://wcagcheck.eu/automated-accessibility-testing">
+<meta property="og:title" content="What an automated accessibility check can and cannot prove">
+<meta property="og:description" content="Which problems a scanner finds, which it structurally cannot, and why a clean result is not compliance.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can an automated accessibility checker prove my site is compliant?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Automated testing reliably covers roughly a third of accessibility requirements. The rest need a person, because they turn on meaning and intent — whether alt text describes the right thing, whether a heading is honest about what follows, whether an error message tells you how to fix the error. A clean automated result means the machine-detectable problems are gone, which is a real and useful thing, but it is not conformance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does a scanner report things it cannot decide?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Because the alternative is worse. Colour contrast against a gradient, or text over an image, often cannot be computed with certainty. A tool can either guess, or say it could not decide. Guessing produces both false comfort and false alarms, so honest tools return those as a separate category and never count them as passes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do accessibility overlays make a website compliant?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. An overlay is JavaScript that adjusts a page after it loads. It cannot know what an image depicts, cannot restructure a form, and cannot fix a keyboard trap in someone else's script. It also cannot remove the underlying legal obligation, because the requirement is that the service be accessible, not that a widget be installed on it."
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="shell bar__inner">
+    <a class="bar__mark" href="/">wcagcheck.eu</a>
+    <span class="bar__standard">EN 301 549 &middot; WCAG 2.2 &middot; Level A/AA</span>
+  </div>
+</header>
+
+<main id="main">
+  <article class="shell page">
+    <p class="hero__eyebrow">Scope &middot; what a machine can and cannot decide</p>
+    <h1 class="page__title">What an automated check can and cannot prove</h1>
+    <p class="page__lede">
+      A scanner finds roughly a third of accessibility problems. That third is worth
+      finding &mdash; it is cheap, repeatable and catches the failures that affect the
+      most people. But a clean result is not compliance, and a tool that lets you
+      believe otherwise has done you harm rather than good.
+    </p>
+
+    <div class="prose">
+      <h2>What a machine is genuinely good at</h2>
+      <p>
+        Anything that reduces to a rule about markup or computed style. Whether an image
+        has an <code>alt</code> attribute. Whether a form control has a label. Whether a
+        button has an accessible name. Whether the contrast ratio between two resolved
+        colours clears 4.5:1. Whether an ARIA attribute is valid on the element carrying
+        it. These are decidable, and a machine decides them faster and more consistently
+        than any person.
+      </p>
+
+      <h2>What it structurally cannot see</h2>
+      <p>
+        The requirements that turn on <em>meaning</em>. A machine can tell you an image
+        has alt text. It cannot tell you the alt text describes the image. It can tell
+        you a heading exists; it cannot tell you the heading is honest about what
+        follows. It can tell you an error message appeared; it cannot tell you the
+        message explains how to fix the error.
+      </p>
+      <p>
+        Then there is everything that requires doing something rather than reading
+        something: whether you can complete a purchase with a keyboard alone, whether
+        focus order matches the visual order, whether a modal traps you, whether a video
+        has an audio description that describes anything useful. Those need a person,
+        and often a person using the assistive technology in question.
+      </p>
+
+      <h2>The specific limits of this tool</h2>
+      <p>
+        We run <a href="https://github.com/dequelabs/axe-core">axe-core</a> in your own
+        browser against the page you name, and a separate pass over the raw HTML. Three
+        limits are worth stating plainly:
+      </p>
+      <ul>
+        <li>
+          <strong>Scripts on the scanned page never run.</strong> That is a security
+          decision, not an oversight &mdash; executing arbitrary third-party JavaScript
+          in our origin would be a hole in this site. Content built entirely by
+          JavaScript is therefore invisible to the check.
+        </li>
+        <li>
+          <strong>Colour contrast is judged only for what fits on screen.</strong>
+          Contrast needs real layout at real coordinates; content below the fold comes
+          back unassessed rather than passing.
+        </li>
+        <li>
+          <strong>Some sites refuse us.</strong> Bot protection returns 403, 429 or 511
+          to automated requests. We say so rather than reporting the site as broken.
+        </li>
+      </ul>
+
+      <h2>Why we list requirements we cannot check</h2>
+      <p>
+        Most scanners show you what failed and stop. That reads as a clean bill of
+        health when the list is short, because nothing on the page distinguishes
+        &ldquo;we checked this and it passed&rdquo; from &ldquo;we never looked&rdquo;.
+      </p>
+      <p>
+        Our report lists <em>every</em> requirement in clause 9 of EN 301 549, and marks
+        the ones automation never examined as needing a person. On a typical page that
+        is the majority of them. It makes the report look less flattering and considerably
+        more useful, because the untested rows are your actual remaining work.
+      </p>
+      <p>
+        Results the engine could not decide get their own category too, and are never
+        counted as passes. Contrast over a gradient is the common case: the honest answer
+        is that it could not be determined, and saying so beats guessing in either
+        direction.
+      </p>
+
+      <h2>Overlays do not close the gap</h2>
+      <p>
+        An accessibility overlay is JavaScript that adjusts a page after it loads. It
+        cannot know what an image depicts, cannot restructure a form, and cannot fix a
+        keyboard trap inside somebody else&rsquo;s script. It also cannot remove the
+        obligation, because what the law asks is that the service be accessible &mdash;
+        not that a widget be installed on it. If a vendor promises compliance from a
+        script tag, that promise is the product.
+      </p>
+
+      <h2>What to do with a scan result</h2>
+      <p>
+        Treat it as triage. Fix the requirement failures, because those are the
+        machine-certain ones and they map to clauses of the standard. Look at the
+        undecided rows next, since they are usually contrast problems that a person can
+        settle in minutes. Then work through the untested requirements with a keyboard,
+        a screen reader and, ideally, someone who uses one daily.
+      </p>
+      <p>
+        <a href="/">Run a check</a> &middot;
+        <a href="/accessibility-statement-eaa">what the EAA requires you to publish</a> &middot;
+        <a href="/wcag-2-2-en-301-549">which standard applies today</a>
+      </p>
+    </div>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p><a href="/">Run a free accessibility check</a></p>
+    <p>wcagcheck.eu &mdash; a free tool. No account, no tracking of the sites you test.</p>
+  </div>
+</footer>
+</body>
+</html>
