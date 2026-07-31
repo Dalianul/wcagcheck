@@ -44,10 +44,24 @@ function loadAxe() {
  *
  * Deliberately on screen and opaque: hiding it or fading it out silently
  * disables every contrast check.
+ *
+ * DO NOT ADD aria-hidden, hidden, inert, OR display:none TO THIS STAGE.
+ *
+ * It looks like decorative scaffolding that ought to be hidden from assistive
+ * technology, and hiding it is silently catastrophic: axe only evaluates
+ * elements that are in the accessibility tree, so aria-hidden="true" here took
+ * dedeman.ro from 11 violations and 34 passes to 0 violations and 84
+ * inapplicable. The tool reported a broken page as clean. Measured, not
+ * theorised.
+ *
+ * The consequence we accept: for the second or so that a scan runs, the scanned
+ * page's content is exposed to assistive technology on our own page. The results
+ * region is an aria-live region and announces the scan, and the stage is removed
+ * as soon as axe returns.
  */
 function buildStage(html, finalUrl) {
   const stage = document.createElement('div');
-  stage.setAttribute('aria-hidden', 'true');
+  stage.dataset.role = 'analysis-stage';
   stage.style.cssText =
     'position:fixed;top:0;left:0;z-index:9998;' +
     `width:min(${STAGE_WIDTH}px,100vw);height:100vh;overflow:hidden;` +

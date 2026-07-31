@@ -1544,7 +1544,11 @@ function loadAxe() {
  */
 function buildStage(html, finalUrl) {
   const stage = document.createElement('div');
-  stage.setAttribute('aria-hidden', 'true');
+  // DO NOT ADD aria-hidden / hidden / inert / display:none HERE. axe only
+  // evaluates elements in the accessibility tree, so aria-hidden="true" took
+  // dedeman.ro from 11 violations to 0 with 84 rules inapplicable — a broken
+  // page reported as clean. Measured, not theorised.
+  stage.dataset.role = 'analysis-stage';
   stage.style.cssText =
     'position:fixed;top:0;left:0;z-index:9998;' +
     `width:min(${STAGE_WIDTH}px,100vw);height:100vh;overflow:hidden;` +
