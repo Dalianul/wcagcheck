@@ -1,6 +1,7 @@
 /* wcagcheck.eu front end. No dependencies, no build step. */
 
 import { runAxeScan } from './axe-runner.js';
+import { mergeResults } from './merge.js';
 
 const form = document.getElementById('scan-form');
 const field = document.getElementById('url');
@@ -51,76 +52,30 @@ function renderScope(scope, truncated) {
   return box;
 }
 
-/** The four static rules axe cannot evaluate inside a shadow root. */
-const DOCUMENT_LEVEL_RULES = new Set([
-  'missing-title', 'html-missing-lang', 'no-h1', 'no-main-landmark',
-]);
-
+/**
+ * Draws a merged result. Every judgement about what was found lives in
+ * merge.js, where it is testable; this function only puts it on the page.
+ */
 function renderMerged(axeResult, staticResult, requested) {
+  const merged = mergeResults(axeResult, staticResult, requested);
   results.replaceChildren();
-
-  const axeRan = Boolean(axeResult);
-
-  // While axe is running, only the document-level rules are taken from the
-  // static scan — the other sixteen overlap with axe rules and would report the
-  // same problem twice under two names. When axe could not run there is nothing
-  // to double-report against, so every static finding is shown instead of
-  // throwing away sixteen rules' worth of real results.
-  const staticFindings = (staticResult?.issues ?? []).filter(
-    (i) => !axeRan || DOCUMENT_LEVEL_RULES.has(i.id)
-  );
-  const requirements = [
-    ...staticFindings.map((i) => ({
-      id: i.id, help: i.title, helpUrl: null, impact: i.impact,
-      wcag: i.wcag, en301549: i.en301549, level: i.wcagLevel,
-      nodes: i.count, examples: i.examples ?? [],
-    })),
-    ...(axeResult?.requirements ?? []),
-  ];
-  const bestPractices = axeResult?.bestPractices ?? [];
-  const incomplete = axeResult?.incomplete ?? [];
 
   const tally = el('div', 'tally');
   const subject = el('div', 'tally__subject');
   const heading = el('h2', 'entry__title');
   heading.append(el('span', 'visually-hidden', 'Results for '));
-  heading.append(document.createTextNode(staticResult?.pageTitle || axeResult?.finalUrl || requested));
+  heading.append(document.createTextNode(merged.subject));
   subject.append(heading);
-  subject.append(el('p', 'tally__url', axeResult?.finalUrl || staticResult?.url || requested));
+  subject.append(el('p', 'tally__url', merged.url));
   tally.append(subject);
-
-  // A clean zero is only honest when both engines actually ran. If the
-  // in-browser engine failed, roughly 95 of the checks never happened, and a
-  // green "0 issues found" would read as a pass — the most damaging thing this
-  // tool could get wrong.
-  if (requirements.length === 0 && incomplete.length === 0 && axeRan) {
-    tally.append(figure('0', 'issues found', 'clear'));
-  } else {
-    if (requirements.length) tally.append(figure(requirements.length, 'requirement failures', 'serious'));
-    if (bestPractices.length) tally.append(figure(bestPractices.length, 'best practice', 'minor'));
-    if (incomplete.length) tally.append(figure(incomplete.length, 'needs review', 'moderate'));
-    if (!axeRan) tally.append(figure('—', 'element checks did not run', 'moderate'));
-  }
+  for (const f of merged.figures) tally.append(figure(f.value, f.label, f.variant));
   results.append(tally);
 
-  for (const f of requirements) results.append(renderAxeEntry(f, 'serious'));
-  for (const f of bestPractices) results.append(renderAxeEntry(f, 'minor'));
-  for (const f of incomplete) results.append(renderAxeEntry(f, 'moderate'));
+  for (const f of merged.requirements) results.append(renderAxeEntry(f, 'serious'));
+  for (const f of merged.bestPractices) results.append(renderAxeEntry(f, 'minor'));
+  for (const f of merged.incomplete) results.append(renderAxeEntry(f, 'moderate'));
 
-  const notCovered = [
-    'Content built by JavaScript — scripts are never executed, by design',
-    'The roughly two thirds of WCAG criteria that need human judgement',
-  ];
-  if (!axeResult) notCovered.unshift('Element-level checks — the in-browser engine could not run on this page');
-  else if (axeResult.contrastScope !== 'visible-area') notCovered.unshift('Colour contrast — it could not be measured on this page');
-  else notCovered.unshift('Colour contrast below the area that fits on screen');
-  if (!staticResult) notCovered.unshift('Page-level checks such as title and language');
-
-  results.append(renderScope({
-    standard: axeResult ? `${axeResult.engine}, WCAG 2.2 A/AA plus best practices` : 'static HTML checks only',
-    mappedTo: 'EN 301 549 clause 9 (the standard the European Accessibility Act refers to)',
-    notCovered,
-  }, Boolean(axeResult?.truncated || staticResult?.truncated)));
+  results.append(renderScope(merged.scope, merged.truncated));
 }
 
 /** One finding as a ledger entry. */
