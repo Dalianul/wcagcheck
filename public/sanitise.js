@@ -26,6 +26,38 @@ function stripElement(html, tag) {
 }
 
 /**
+ * Rewrites the target's <link> elements so its stylesheets actually apply.
+ *
+ * Two separate problems, both observed rather than anticipated:
+ *
+ * A stylesheet carrying `crossorigin` is fetched in CORS mode, and the target's
+ * server sends no Access-Control-Allow-Origin for us, so it silently never
+ * loads — measured on otto.de and mediamarkt.de. Contrast is then judged
+ * against a partially unstyled page, which is worse than not judging it,
+ * because it still looks like an answer. Without the attribute it is an
+ * ordinary no-CORS load, which works cross-origin; getComputedStyle does not
+ * need the CSSOM to be readable. `integrity` goes with it, since subresource
+ * integrity requires CORS mode and would drag it straight back on.
+ *
+ * Script preloads survive the element stripping because they are <link>
+ * elements, not <script> ones. They can never execute — the CSP blocks them and
+ * nothing imports them — but the browser still fetches them, which means
+ * pointing this tool at a page makes the visitor's connection pull JavaScript
+ * from that site's CDN for no reason.
+ */
+function rewriteLinks(html) {
+  return html.replace(/<link\b[^>]*>/gi, (tag) => {
+    const rel = /\brel\s*=\s*["']?([^"'\s>]*)/i.exec(tag)?.[1]?.toLowerCase() ?? '';
+    const as = /\bas\s*=\s*["']?([^"'\s>]*)/i.exec(tag)?.[1]?.toLowerCase() ?? '';
+    if (rel === 'modulepreload') return '';
+    if (rel === 'preload' && as === 'script') return '';
+    return tag
+      .replace(/\s+crossorigin(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, '')
+      .replace(/\s+integrity\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  });
+}
+
+/**
  * Rewrites a srcset list, which is comma-separated candidates each optionally
  * followed by a descriptor: "a.png 1x, b.png 2x".
  *
@@ -64,6 +96,8 @@ export function sanitiseForAnalysis(html, baseUrl) {
 
   // Anything that navigates or reloads on its own.
   out = out.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
+
+  out = rewriteLinks(out);
 
   // Every event-handler attribute, quoted or bare, any case.
   //

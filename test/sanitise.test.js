@@ -88,6 +88,67 @@ describe('sanitiseForAnalysis — things axe needs kept', () => {
   });
 });
 
+// Contrast is judged from the target's own stylesheets, so anything that stops
+// one loading corrupts the headline measurement rather than merely degrading it.
+describe('sanitiseForAnalysis — making the target\'s stylesheets actually load', () => {
+  // Observed on otto.de and mediamarkt.de: a crossorigin stylesheet is fetched
+  // in CORS mode, the target's server sends no Access-Control-Allow-Origin for
+  // us, and the stylesheet silently never applies. Without the attribute it is
+  // an ordinary no-CORS load, which works cross-origin — getComputedStyle does
+  // not need the CSSOM to be readable.
+  it('removes crossorigin from a stylesheet link but keeps the link', () => {
+    const out = sanitiseForAnalysis(
+      '<link rel="stylesheet" href="/a.css" crossorigin="anonymous">', base
+    );
+    expect(out).not.toMatch(/crossorigin/i);
+    expect(out).toContain('rel="stylesheet"');
+    expect(out).toContain('https://example.com/a.css');
+  });
+
+  it('removes a bare crossorigin attribute with no value', () => {
+    const out = sanitiseForAnalysis('<link rel="stylesheet" href="/a.css" crossorigin>', base);
+    expect(out).not.toMatch(/crossorigin/i);
+    expect(out).toContain('rel="stylesheet"');
+  });
+
+  // Subresource integrity requires CORS mode, so dropping crossorigin while
+  // leaving integrity would turn a working stylesheet into a failing one.
+  it('removes integrity alongside it, which would otherwise force CORS back on', () => {
+    const out = sanitiseForAnalysis(
+      '<link rel="stylesheet" href="/a.css" integrity="sha384-abc" crossorigin="anonymous">', base
+    );
+    expect(out).not.toMatch(/integrity/i);
+    expect(out).not.toMatch(/crossorigin/i);
+  });
+
+  it('leaves a plain stylesheet link otherwise intact', () => {
+    const out = sanitiseForAnalysis('<link rel="stylesheet" href="/a.css" media="screen">', base);
+    expect(out).toContain('media="screen"');
+    expect(out).toContain('rel="stylesheet"');
+  });
+});
+
+// These can never execute — the CSP blocks them and nothing would import them
+// — but they still make the visitor's browser fetch scripts from the scanned
+// site's CDN, which is traffic we have no business causing.
+describe('sanitiseForAnalysis — script preloads', () => {
+  it('drops a module preload', () => {
+    const out = sanitiseForAnalysis('<link rel="modulepreload" href="/m.js"><p>x</p>', base);
+    expect(out).not.toMatch(/modulepreload/i);
+    expect(out).toContain('<p>x</p>');
+  });
+
+  it('drops a script preload', () => {
+    const out = sanitiseForAnalysis('<link rel="preload" as="script" href="/s.js">', base);
+    expect(out).not.toMatch(/preload/i);
+  });
+
+  it('keeps a style preload, which is a stylesheet and affects contrast', () => {
+    const out = sanitiseForAnalysis('<link rel="preload" as="style" href="/a.css">', base);
+    expect(out).toMatch(/as="style"/);
+  });
+});
+
 describe('sanitiseForAnalysis — url resolution', () => {
   // Shadow DOM ignores <base>, so relative URLs must be absolute before
   // insertion or the target's stylesheets never load and contrast is wrong.
