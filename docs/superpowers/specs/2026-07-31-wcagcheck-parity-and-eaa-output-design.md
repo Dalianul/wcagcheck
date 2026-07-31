@@ -1,7 +1,35 @@
 # wcagcheck.eu — detection parity and EAA-shaped output
 
 **Date:** 2026-07-31
-**Status:** approved, not yet implemented
+**Status:** implemented, with two parts of it deliberately abandoned
+
+## Amendment, 2026-07-31 — read this before building anything below
+
+Steps 1 and 2 shipped. Two things in this document turned out to be wrong and
+were dropped on evidence. They are left in the text below so the reasoning is
+visible, but **do not build them**.
+
+**The accessibility statement generator is cancelled.** This spec asserts that
+"The EAA requires publishing an accessibility statement". It does not. The
+phrase appears nowhere in Directive (EU) 2019/882. Article 13(2) and Annex V
+require *information* in three parts, and every field this spec listed —
+conformance status, list of non-accessible content, feedback contact,
+enforcement body — belongs to the Web Accessibility Directive's model statement
+under Commission Implementing Decision (EU) 2018/1523, which is scoped to public
+sector bodies in its own Article 1. Building it would have shipped an
+authoritative-looking document that is wrong about the law. Separately, GetWCAG
+already generates the specced version free. The correct law is published instead
+at `/accessibility-statement-eaa`.
+
+**Twenty criterion pages are cancelled.** Each would have competed with W3C's own
+Understanding documents and WebAIM's from a new domain. Four differentiated
+pages shipped instead: what the EAA actually requires, WCAG 2.2 versus the
+EN 301 549 version in force, BFSG in German, and the limits of automated testing.
+
+**One thing this spec missed entirely.** "9." plus the WCAG criterion is not a
+safe derivation, because EN 301 549 has versions: v3.2.1 is cited in the Official
+Journal and restates WCAG 2.1, not 2.2. The tool was citing clause 9.2.5.8, which
+does not exist. See `public/criteria.js`.
 
 ## Why
 
