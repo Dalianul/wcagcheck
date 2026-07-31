@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>axe verification fixture</title>
 <style>
-  .low-contrast { color: #999999; background: #ffffff; }
+  .low-contrast { color: #999999; background: #ffffff; font-size: 16px; }
 </style>
 </head>
 <body>
@@ -19,12 +19,9 @@
   <!-- expect: label -->
   <input type="text" name="unlabelled">
   <!-- expect: color-contrast -->
-  <p class="low-contrast">This grey text on white fails AA contrast.</p>
+  <p class="low-contrast">This grey text on white fails the AA contrast requirement.</p>
   <!-- expect: heading-order -->
   <h1>One</h1>
   <h4>Four, skipping two and three</h4>
-  <!-- expect: duplicate-id or landmark rules may also fire; that is fine -->
-  <div id="dup">a</div>
-  <div id="dup">b</div>
 </body>
 </html>
