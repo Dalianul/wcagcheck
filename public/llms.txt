@@ -1,0 +1,42 @@
+# WCAG Check
+
+> A free tool that checks whether a web page meets the accessibility requirements of the European Accessibility Act. It reports each problem against both its WCAG 2.2 success criterion and the corresponding EN 301 549 clause 9 reference, which is the standard the Act actually cites.
+
+Enter a page URL and the tool fetches its HTML and runs 20 checks that can be
+determined without a browser. Results are generated per request; nothing about a
+scanned site is stored, and no account is needed.
+
+## What it detects
+
+- Images: missing alt text, alt text that is only a filename, image buttons and image map areas without alt
+- Structure: no h1, skipped heading levels, no main landmark
+- Forms: fields with no associated label
+- Links and buttons: no accessible name, non-descriptive link text
+- Document: missing title, missing lang attribute, duplicate id values, positive tabindex
+- Media: video or audio without captions, media that autoplays
+- Zoom: a viewport meta tag that prevents zooming
+- Tables: data tables without header cells
+- Frames: iframe without a title
+
+## What it cannot detect
+
+Because the analysis is static and executes no JavaScript, these are out of scope
+and are stated as such on the page:
+
+- Colour contrast, which requires rendered styles
+- Keyboard traps and focus order, which require a real browser
+- Content injected by JavaScript
+- The quality of video audio descriptions
+
+Roughly a third of accessibility requirements need human judgement. A clean
+result means the machine-detectable problems are gone, not that a site is
+compliant.
+
+## Pages
+
+- [Home and scanner](https://wcagcheck.eu/): run a check and read the report
+
+## References
+
+- [WCAG 2.2](https://www.w3.org/TR/WCAG22/): the W3C accessibility guidelines
+- [EN 301 549](https://www.etsi.org/deliver/etsi_en/301500_301599/301549/): the European standard whose clause 9 restates WCAG Level A and AA for websites

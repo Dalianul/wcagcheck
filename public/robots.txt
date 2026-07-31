@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# The scan endpoint takes a URL parameter, so crawling it produces infinite
+# duplicate work for no indexable content.
+Disallow: /api/
+
+Sitemap: https://wcagcheck.eu/sitemap.xml
