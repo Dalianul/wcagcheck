@@ -159,9 +159,9 @@ describe('other rules', () => {
     expect(ids(body)).toContain('viewport-blocks-zoom');
   });
 
-  it('flags duplicate ids and positive tabindex', async () => {
-    const { body } = await scan(wrap('<p id="dup">a</p><p id="dup">b</p><div tabindex="3">c</div>'));
-    expect(ids(body)).toEqual(expect.arrayContaining(['duplicate-id', 'positive-tabindex']));
+  it('flags a positive tabindex', async () => {
+    const { body } = await scan(wrap('<div tabindex="3">c</div>'));
+    expect(ids(body)).toContain('positive-tabindex');
   });
 
   it('flags a skipped heading level', async () => {
@@ -189,6 +189,51 @@ describe('other rules', () => {
       expect(issue.en301549).toBe(`9.${issue.wcag}`);
       expect(issue.remedy).toBeTruthy();
     }
+  });
+});
+
+// SC 4.1.1 Parsing was removed in WCAG 2.2, and W3C annotated it in 2.0 and 2.1
+// as "should be considered as always satisfied for any content using HTML or
+// XML". axe moved both of its duplicate-id rules to the wcag2a-obsolete tag for
+// the same reason. A duplicate id is only a real failure when it breaks a
+// reference, and then what it breaks is the accessible name — 4.1.2.
+describe('duplicate ids', () => {
+  it('ignores a duplicate id that nothing references', async () => {
+    const { body } = await scan(wrap('<p id="dup">a</p><p id="dup">b</p>'));
+    expect(ids(body)).not.toContain('duplicate-id');
+  });
+
+  it('flags a duplicate id that a label points at', async () => {
+    const { body } = await scan(
+      wrap('<label for="dup">Name</label><input id="dup"><input id="dup">')
+    );
+    expect(ids(body)).toContain('duplicate-id');
+  });
+
+  it('flags a duplicate id referenced by aria-labelledby', async () => {
+    const { body } = await scan(
+      wrap('<span id="dup">Label</span><span id="dup">Other</span><button aria-labelledby="dup">x</button>')
+    );
+    expect(ids(body)).toContain('duplicate-id');
+  });
+
+  // aria-labelledby takes a space-separated list, so a naive whole-value lookup
+  // would miss every reference after the first.
+  it('reads every id in a space-separated reference list', async () => {
+    const { body } = await scan(
+      wrap('<span id="a">A</span><span id="dup">B</span><span id="dup">C</span>' +
+        '<button aria-labelledby="a dup">x</button>')
+    );
+    expect(ids(body)).toContain('duplicate-id');
+  });
+
+  it('cites 4.1.2, not the retired 4.1.1', async () => {
+    const { body } = await scan(
+      wrap('<label for="dup">Name</label><input id="dup"><input id="dup">')
+    );
+    const finding = body.issues.find((i) => i.id === 'duplicate-id');
+    expect(finding.wcag).toBe('4.1.2');
+    expect(finding.en301549).toBe('9.4.1.2');
   });
 });
 

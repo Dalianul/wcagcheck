@@ -29,7 +29,7 @@ const RULES = {
   'button-no-name':       { impact: 'serious',  wcag: '4.1.2', level: 'A',  title: 'Buttons with no accessible name' },
   'control-no-label':     { impact: 'serious',  wcag: '3.3.2', level: 'A',  title: 'Form fields without labels' },
   'iframe-no-title':      { impact: 'serious',  wcag: '4.1.2', level: 'A',  title: 'Frames without a title' },
-  'duplicate-id':         { impact: 'moderate', wcag: '4.1.1', level: 'A',  title: 'Duplicate id attributes' },
+  'duplicate-id':         { impact: 'moderate', wcag: '4.1.2', level: 'A',  title: 'Duplicate id breaks a reference' },
   'positive-tabindex':    { impact: 'moderate', wcag: '2.4.3', level: 'A',  title: 'Positive tabindex values' },
   'viewport-blocks-zoom': { impact: 'serious',  wcag: '1.4.4', level: 'AA', title: 'Zoom disabled by viewport meta' },
   'media-no-captions':    { impact: 'serious',  wcag: '1.2.2', level: 'A',  title: 'Video or audio without captions' },
@@ -52,7 +52,7 @@ const REMEDY = {
   'button-no-name': 'Add text inside the button, or an aria-label. Icon-only buttons are unusable without one.',
   'control-no-label': 'Associate a <label for="..."> with each field, or use aria-label. Placeholder text is not a label.',
   'iframe-no-title': 'Add a title attribute describing the embedded content, e.g. title="Cookie settings".',
-  'duplicate-id': 'Make every id unique. Duplicates break label associations and aria references.',
+  'duplicate-id': 'Make this id unique. Something references it, and the reference resolves to whichever element comes first, so the wrong element supplies the accessible name.',
   'positive-tabindex': 'Use tabindex="0" or none at all. Positive values create a tab order that fights the visual one.',
   'viewport-blocks-zoom': 'Remove user-scalable=no and any maximum-scale below 2. Users must be able to zoom to 200%.',
   'media-no-captions': 'Add a <track kind="captions"> element. Prerecorded video with audio requires captions.',
@@ -70,6 +70,19 @@ const VAGUE_LINK_TEXT = new Set([
 ]);
 
 const FILENAME_ALT = /\.(jpe?g|png|gif|svg|webp|avif|bmp|ico)$/i;
+
+// Attributes whose value is an id, or a space-separated list of them.
+//
+// A duplicate id is only a real failure when a reference like one of these
+// resolves to the wrong element. SC 4.1.1 Parsing, which duplicate ids used to
+// be reported under, was removed in WCAG 2.2 and is annotated in 2.0 and 2.1 as
+// always satisfied for HTML — so the failure to report is the broken reference
+// (4.1.2 Name, Role, Value), not the duplication itself.
+const ID_REFERENCE_ATTRS = [
+  'for', 'aria-labelledby', 'aria-describedby', 'aria-controls', 'aria-owns',
+  'aria-details', 'aria-errormessage', 'aria-flowto', 'headers', 'list',
+];
+const ID_REFERENCE_SELECTOR = ID_REFERENCE_ATTRS.map((attr) => `[${attr}]`).join(', ');
 
 const MAX_REDIRECTS = 5;
 
@@ -308,6 +321,8 @@ async function scan(parsedUrl) {
     h1Count: 0,
     lastHeadingLevel: 0,
     seenIds: new Set(),
+    duplicateIds: new Set(),
+    referencedIds: new Set(),
     // Stack of elements whose accessible name we are accumulating text for.
     nameStack: [],
     labelledInputs: new Set(),
@@ -493,10 +508,22 @@ async function scan(parsedUrl) {
       element(el) {
         const id = el.getAttribute('id');
         if (!id) return;
-        if (state.seenIds.has(id)) {
-          report.add('duplicate-id', `id="${id}"`);
-        } else {
-          state.seenIds.add(id);
+        // Resolved at the end: a reference may appear before or after the id it
+        // points at, so neither set is complete until the pass is.
+        if (state.seenIds.has(id)) state.duplicateIds.add(id);
+        else state.seenIds.add(id);
+      },
+    })
+    .on(ID_REFERENCE_SELECTOR, {
+      element(el) {
+        for (const attr of ID_REFERENCE_ATTRS) {
+          const value = el.getAttribute(attr);
+          if (!value) continue;
+          // These take a space-separated list, so reading the whole value as
+          // one id would miss every reference after the first.
+          for (const token of value.split(/\s+/)) {
+            if (token) state.referencedIds.add(token);
+          }
         }
       },
     })
@@ -607,6 +634,11 @@ async function scan(parsedUrl) {
     if (!control.id || !state.labelledInputs.has(control.id)) {
       report.add('control-no-label', control.describe);
     }
+  }
+  // An unreferenced duplicate id breaks nothing, and reporting it is exactly the
+  // false-positive class this scanner exists to avoid.
+  for (const id of state.duplicateIds) {
+    if (state.referencedIds.has(id)) report.add('duplicate-id', `id="${id}"`);
   }
 
   const issues = report.finalise();
