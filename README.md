@@ -13,13 +13,17 @@ the product.
 
 ## Stack
 
-Deliberately boring, so it runs free and never breaks:
+A Cloudflare Worker with static assets. Cloudflare's current guidance is to start
+new projects on Workers rather than Pages, so this skips Pages entirely.
 
-- **Static HTML/CSS/JS** in `public/` — no framework, no build step
-- **One Cloudflare Pages Function** in `functions/api/scan.js`
-- **`HTMLRewriter`** for parsing — native to the Workers runtime, streaming and
-  Rust-backed, so a scan stays inside the free tier's CPU budget
-- **Zero npm dependencies**
+- **`public/`** — static site, no framework and no build step
+- **`src/index.js`** — Worker entry. Assets are served first, so `fetch()` only
+  sees paths with no matching file; that's how `/api/scan` routes with no explicit
+  route config
+- **`src/scan.js`** — the scanner. Uses **`HTMLRewriter`**, native to the Workers
+  runtime, streaming and Rust-backed, so a scan stays inside the free tier's CPU
+  budget
+- **Zero runtime dependencies.** `wrangler` is a dev dependency only
 
 ## Checks
 
@@ -37,29 +41,61 @@ Deliberately boring, so it runs free and never breaks:
 | Tables | data table without header cells |
 | Frames | `iframe` without title |
 
+Accessible names are computed from descendants, so an icon-only button labelled by
+a child `<svg aria-label>` is not a false positive. The page-title check is scoped
+to `head > title` so inline `<svg><title>` elements don't satisfy it.
+
 ### Deliberately out of scope
 
 Static analysis cannot see rendered styles or run scripts, so colour contrast,
-focus order, keyboard traps and JS-injected content are not covered. The UI says
-so on the page rather than implying a complete audit.
+focus order, keyboard traps and JS-injected content are not covered. The UI states
+this rather than implying a complete audit.
+
+## Fetch behaviour
+
+The scanner identifies itself honestly:
+
+```
+Mozilla/5.0 (compatible; wcagcheck.eu/1.0; +https://wcagcheck.eu)
+```
+
+This was measured, not assumed. Browser-spoofing user-agents were tested against
+seven sites: they recovered nothing and actively lost `w3.org` (200 → 403), which
+rejects requests claiming to be Chrome while fingerprinting otherwise. Sites that
+return 403/429 do so on IP and TLS fingerprint, which no header changes.
+
+Expect roughly 60% of large retail sites to be scannable; the rest sit behind
+Akamai-class bot protection. Small business sites — the actual audience — are far
+less likely to.
+
+Requests to loopback, private ranges and non-HTTP schemes are refused, so the
+scanner cannot be pointed at internal infrastructure.
 
 ## Local development
 
 ```sh
-npx wrangler pages dev public          # serves public/ + functions/
-curl 'http://localhost:8788/api/scan?url=example.com' | jq
+npm install
+npm run dev                                        # http://localhost:8787
+curl 'http://localhost:8787/api/scan?url=example.com' | jq
 ```
 
 ## Deploy
 
-Cloudflare Pages, connected to this repo. Every push to `main` deploys.
+Connected to Cloudflare Workers Builds. Every push to `main` deploys.
 
 - Build command: **none**
-- Build output directory: **`public`**
-- Functions are picked up automatically from `functions/`
+- Deploy command: **`npx wrangler deploy`**
+- Config lives in `wrangler.toml`; the assets binding serves `public/`
+
+## Verification
+
+- `w3.org/WAI` returns **0 issues** — the correct result, and the control that
+  caught two false-positive bugs during development
+- Lighthouse: **100** on accessibility, best practices, SEO and agentic browsing,
+  zero failed audits. A tool that grades accessibility should pass its own standard
 
 ## Notes
 
 - `research/` holds the Google Keyword Planner exports (13,262 keywords) behind the
-  decision to build this. Kept for reference, not used at runtime.
-- Nothing about a scanned site is stored. Reports are generated per request.
+  decision to build this. Reference only, never served
+- Nothing about a scanned site is stored. Reports are generated per request

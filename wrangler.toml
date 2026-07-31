@@ -1,0 +1,13 @@
+name = "wcagcheck"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Static site in public/ is served directly by the assets runtime. The Worker
+# only runs for paths with no matching file, which is how /api/scan is routed
+# without any explicit route config.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[observability]
+enabled = true

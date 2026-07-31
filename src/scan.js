@@ -1,9 +1,9 @@
 /**
  * WCAG / EN 301 549 static accessibility scan.
  *
- * Runs as a Cloudflare Pages Function on the free tier. Uses HTMLRewriter
- * (native, streaming, Rust-backed) instead of a DOM library so we stay well
- * inside the Workers CPU budget and ship zero dependencies.
+ * Runs in a Cloudflare Worker on the free tier. Uses HTMLRewriter (native,
+ * streaming, Rust-backed) instead of a DOM library so we stay well inside the
+ * Workers CPU budget and ship zero runtime dependencies.
  *
  * Deliberate limitation: no JavaScript is executed and no styles are resolved,
  * so colour contrast, focus order and keyboard traps are out of scope. The UI
@@ -155,19 +155,15 @@ async function scan(parsedUrl) {
     response = await fetch(parsedUrl.toString(), {
       redirect: 'follow',
       signal: controller.signal,
-      // Browser-shaped headers. Plenty of WAFs reject anything that doesn't look
-      // like a browser, and a scanner that can't fetch the page is useless — but
-      // the UA still identifies the tool so operators can see who called.
+      // Identify honestly. Measured against browser-spoofing UAs on 7 sites:
+      // spoofing recovered nothing and actively lost w3.org (200 -> 403), which
+      // rejects requests claiming to be Chrome while fingerprinting otherwise.
+      // Sites that block us (403/429) do so on IP and TLS fingerprint, which no
+      // header can change.
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-          'Chrome/126.0.0.0 Safari/537.36 wcagcheck.eu/1.0 (+https://wcagcheck.eu)',
+        'User-Agent': 'Mozilla/5.0 (compatible; wcagcheck.eu/1.0; +https://wcagcheck.eu)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-GB,en;q=0.9,ro;q=0.8,de;q=0.7',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Upgrade-Insecure-Requests': '1',
       },
     });
   } catch (err) {
@@ -548,7 +544,7 @@ async function scan(parsedUrl) {
   };
 }
 
-export async function onRequestGet({ request }) {
+export async function handleScan(request) {
   const target = new URL(request.url).searchParams.get('url');
   const json = (body, status) =>
     new Response(JSON.stringify(body, null, 2), {

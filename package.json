@@ -1,0 +1,13 @@
+{
+  "name": "wcagcheck",
+  "private": true,
+  "type": "module",
+  "description": "Accessibility checker mapping WCAG 2.2 findings to EN 301 549 clauses",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}
