@@ -355,6 +355,17 @@ body {
   max-width: 62ch;
 }
 
+/* Says a finding is a real WCAG 2.2 failure but not yet an EN 301 549
+   requirement. Set apart because the distinction is the point, not a footnote. */
+.entry__pending {
+  margin: 0 0 0.75rem;
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+  max-width: 62ch;
+}
+
 .entry__samples {
   margin: 0.875rem 0 0;
   padding: 0;

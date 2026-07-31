@@ -10,6 +10,8 @@
  * Rendering reads the result and draws it. It makes no decisions of its own.
  */
 
+import { IN_FORCE, STANDARD_VERSIONS } from './criteria.js';
+
 /** The four static rules axe cannot evaluate inside a shadow root. */
 export const DOCUMENT_LEVEL_RULES = new Set([
   'missing-title', 'html-missing-lang', 'no-h1', 'no-main-landmark',
@@ -43,6 +45,10 @@ export function mergeResults(axeResult, staticResult, requested) {
   );
 
   const requirements = [...staticFindings.map(fromStatic), ...(axeResult?.requirements ?? [])];
+  // Real WCAG 2.2 failures that the version of EN 301 549 in force does not yet
+  // contain. Counting them as requirement failures overstates the law; filing
+  // them under best practice understates the finding.
+  const notYetRequired = axeResult?.notYetRequired ?? [];
   const bestPractices = axeResult?.bestPractices ?? [];
   // Never folded into passes or requirements: axe could not decide these.
   const incomplete = axeResult?.incomplete ?? [];
@@ -51,14 +57,17 @@ export function mergeResults(axeResult, staticResult, requested) {
     subject: staticResult?.pageTitle || axeResult?.finalUrl || requested,
     url: axeResult?.finalUrl || staticResult?.url || requested,
     requirements,
+    notYetRequired,
     bestPractices,
     incomplete,
-    figures: tally({ axeRan, requirements, bestPractices, incomplete }),
+    figures: tally({ axeRan, requirements, notYetRequired, bestPractices, incomplete }),
     scope: {
       standard: axeRan
         ? `${axeResult.engine}, WCAG 2.2 A/AA plus best practices`
         : 'static HTML checks only',
-      mappedTo: 'EN 301 549 clause 9 (the standard the European Accessibility Act refers to)',
+      mappedTo:
+        `EN 301 549 ${IN_FORCE} clause 9 — the version cited in the Official Journal, ` +
+        `which restates WCAG ${STANDARD_VERSIONS[IN_FORCE].wcag}`,
       notCovered: notCovered(axeResult, staticResult),
     },
     truncated: Boolean(axeResult?.truncated || staticResult?.truncated),
@@ -74,8 +83,14 @@ export function mergeResults(axeResult, staticResult, requested) {
  * failure means roughly 95 checks never happened; best-practice findings mean
  * something was found.
  */
-function tally({ axeRan, requirements, bestPractices, incomplete }) {
-  if (axeRan && !requirements.length && !bestPractices.length && !incomplete.length) {
+function tally({ axeRan, requirements, notYetRequired, bestPractices, incomplete }) {
+  if (
+    axeRan &&
+    !requirements.length &&
+    !notYetRequired.length &&
+    !bestPractices.length &&
+    !incomplete.length
+  ) {
     return [{ value: '0', label: 'issues found', variant: 'clear' }];
   }
 
@@ -87,6 +102,9 @@ function tally({ axeRan, requirements, bestPractices, incomplete }) {
     // failed" is the sentence the visitor came for, and a missing figure does
     // not say it.
     figures.push({ value: '0', label: 'requirement failures', variant: 'clear' });
+  }
+  if (notYetRequired.length) {
+    figures.push({ value: notYetRequired.length, label: 'not yet required', variant: 'minor' });
   }
   if (bestPractices.length) {
     figures.push({ value: bestPractices.length, label: 'best practice', variant: 'minor' });

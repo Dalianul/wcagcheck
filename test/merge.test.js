@@ -26,11 +26,24 @@ const axeResult = (over = {}) => ({
   truncated: false,
   contrastScope: 'visible-area',
   requirements: [],
+  notYetRequired: [],
   bestPractices: [],
   incomplete: [],
   counts: { violations: 0, incomplete: 0, passes: 40, inapplicable: 50 },
   ...over,
 });
+
+const pendingFinding = (over = {}) =>
+  axeFinding({
+    id: 'target-size',
+    help: 'Touch targets must have sufficient size and space',
+    wcag: '2.5.8',
+    criterionName: 'Target Size (Minimum)',
+    en301549: null,
+    arrivesIn: 'v4.1.1',
+    level: 'AA',
+    ...over,
+  });
 
 const staticIssue = (id, over = {}) => ({
   id,
@@ -138,6 +151,48 @@ describe('the tally, which is the part that can lie', () => {
       'example.com'
     );
     expect(merged.figures[0]).toEqual({ value: 3, label: 'requirement failures', variant: 'serious' });
+  });
+});
+
+// The distinction no competitor makes. EN 301 549 v3.2.1 imports WCAG 2.1, so a
+// WCAG 2.2-only failure is real but is not yet an EU legal requirement.
+// Reporting it as a requirement failure overstates the law; burying it in best
+// practices understates the finding.
+describe('WCAG 2.2 failures that are not yet EN 301 549 requirements', () => {
+  it('keeps them out of both requirements and best practices', () => {
+    const merged = mergeResults(
+      axeResult({ notYetRequired: [pendingFinding()] }),
+      staticResult([]),
+      'example.com'
+    );
+    expect(merged.requirements).toEqual([]);
+    expect(merged.bestPractices).toEqual([]);
+    expect(ids(merged.notYetRequired)).toEqual(['target-size']);
+  });
+
+  it('does not let one make the page look clean', () => {
+    const merged = mergeResults(
+      axeResult({ notYetRequired: [pendingFinding()] }),
+      staticResult([]),
+      'example.com'
+    );
+    expect(labels(merged)).not.toContain('issues found');
+    expect(merged.figures).toContainEqual({ value: 1, label: 'not yet required', variant: 'minor' });
+    expect(merged.figures).toContainEqual({ value: '0', label: 'requirement failures', variant: 'clear' });
+  });
+
+  it('does not count toward the requirement-failure figure', () => {
+    const merged = mergeResults(
+      axeResult({ requirements: [axeFinding()], notYetRequired: [pendingFinding()] }),
+      staticResult([]),
+      'example.com'
+    );
+    expect(merged.figures[0]).toEqual({ value: 1, label: 'requirement failures', variant: 'serious' });
+  });
+
+  it('says in the scope note which standard version is being applied', () => {
+    const merged = mergeResults(axeResult(), staticResult([]), 'example.com');
+    expect(merged.scope.mappedTo).toMatch(/v3\.2\.1/);
   });
 });
 

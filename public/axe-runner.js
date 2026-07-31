@@ -84,7 +84,11 @@ function toFinding(result) {
     helpUrl: result.helpUrl,
     impact: result.impact ?? null,
     wcag: meta.wcag,
+    criterionName: meta.name,
     en301549: meta.en301549,
+    // Set when the criterion is real but the standard in force has no clause
+    // for it yet. See criteria.js.
+    arrivesIn: meta.arrivesIn,
     level: meta.level,
     nodes: result.nodes.length,
     examples: result.nodes.slice(0, MAX_EXAMPLES).map((node) => {
@@ -121,7 +125,10 @@ export async function runAxeScan(target) {
       truncated: Boolean(payload.truncated),
       contrastScope: contrastEvaluated ? 'visible-area' : 'not-assessed',
       requirements: violations.filter((f) => f.en301549),
-      bestPractices: violations.filter((f) => !f.en301549),
+      // A genuine WCAG 2.2 failure with no clause in the version in force is
+      // neither of the other two things.
+      notYetRequired: violations.filter((f) => !f.en301549 && f.arrivesIn),
+      bestPractices: violations.filter((f) => !f.en301549 && !f.arrivesIn),
       // Never folded into passes: axe could not decide these.
       incomplete: results.incomplete.map(toFinding),
       counts: {

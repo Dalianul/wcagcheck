@@ -2,6 +2,7 @@
 
 import { runAxeScan } from './axe-runner.js';
 import { mergeResults } from './merge.js';
+import { IN_FORCE, STANDARD_VERSIONS } from './criteria.js';
 
 const form = document.getElementById('scan-form');
 const field = document.getElementById('url');
@@ -72,6 +73,7 @@ function renderMerged(axeResult, staticResult, requested) {
   results.append(tally);
 
   for (const f of merged.requirements) results.append(renderAxeEntry(f, 'serious'));
+  for (const f of merged.notYetRequired) results.append(renderAxeEntry(f, 'minor'));
   for (const f of merged.bestPractices) results.append(renderAxeEntry(f, 'minor'));
   for (const f of merged.incomplete) results.append(renderAxeEntry(f, 'moderate'));
 
@@ -81,8 +83,14 @@ function renderMerged(axeResult, staticResult, requested) {
 /** One finding as a ledger entry. */
 function renderAxeEntry(finding, severity) {
   const entry = el('article', `entry entry--${severity}`);
-  const clause = el('p', 'entry__clause', finding.en301549 || finding.id);
+
+  // A finding with no clause is not necessarily unmapped: it may be a real
+  // WCAG 2.2 criterion the standard in force has not adopted yet, in which case
+  // the criterion number is the honest thing to show.
+  const marker = finding.en301549 || (finding.arrivesIn ? finding.wcag : finding.id);
+  const clause = el('p', 'entry__clause', marker);
   if (finding.en301549) clause.setAttribute('aria-label', `EN 301 549 clause ${finding.en301549}`);
+  else if (finding.arrivesIn) clause.setAttribute('aria-label', `WCAG success criterion ${finding.wcag}`);
   entry.append(clause);
 
   const body = el('div', 'entry__body');
@@ -92,9 +100,18 @@ function renderAxeEntry(finding, severity) {
   body.append(head);
   body.append(el('p', 'entry__meta', [
     finding.impact,
-    finding.wcag ? `WCAG ${finding.wcag}` : 'Best practice',
+    finding.wcag
+      ? `WCAG ${finding.wcag}${finding.criterionName ? ` ${finding.criterionName}` : ''}`
+      : 'Best practice',
     finding.level ? `Level ${finding.level}` : null,
   ].filter(Boolean).join(' · ')));
+
+  if (finding.arrivesIn) {
+    body.append(el('p', 'entry__pending',
+      `A real WCAG 2.2 failure, but not yet a legal requirement: EN 301 549 ${IN_FORCE} restates ` +
+      `WCAG ${STANDARD_VERSIONS[IN_FORCE].wcag} and has no clause for it. It becomes one when ` +
+      `${finding.arrivesIn} is cited in the Official Journal.`));
+  }
 
   if (finding.examples?.length) {
     const list = el('ul', 'entry__samples');

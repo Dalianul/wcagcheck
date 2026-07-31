@@ -8,18 +8,15 @@ import {
 
 describe('criterionFromTags', () => {
   it('derives a single-digit criterion', () => {
-    expect(criterionFromTags(['cat.text-alternatives', 'wcag2a', 'wcag111']))
-      .toEqual({ wcag: '1.1.1', en301549: '9.1.1.1' });
+    expect(criterionFromTags(['cat.text-alternatives', 'wcag2a', 'wcag111'])).toBe('1.1.1');
   });
 
   it('derives a two-digit third component', () => {
-    expect(criterionFromTags(['wcag21aa', 'wcag1410']))
-      .toEqual({ wcag: '1.4.10', en301549: '9.1.4.10' });
+    expect(criterionFromTags(['wcag21aa', 'wcag1410'])).toBe('1.4.10');
   });
 
   it('derives 4.1.2', () => {
-    expect(criterionFromTags(['wcag2a', 'wcag412']))
-      .toEqual({ wcag: '4.1.2', en301549: '9.4.1.2' });
+    expect(criterionFromTags(['wcag2a', 'wcag412'])).toBe('4.1.2');
   });
 
   // Level tags must never be mistaken for criterion tags.
@@ -72,7 +69,9 @@ describe('classify', () => {
   it('classifies a requirement', () => {
     expect(classify(['cat.text-alternatives', 'wcag2a', 'wcag111'])).toEqual({
       wcag: '1.1.1',
+      name: 'Non-text Content',
       en301549: '9.1.1.1',
+      arrivesIn: null,
       level: 'A',
       bestPractice: false,
     });
@@ -82,9 +81,32 @@ describe('classify', () => {
   it('classifies a best practice with no clause', () => {
     expect(classify(['cat.semantics', 'best-practice'])).toEqual({
       wcag: null,
+      name: null,
       en301549: null,
+      arrivesIn: null,
       level: null,
       bestPractice: true,
     });
+  });
+
+  // The live defect. axe's target-size rule is tagged wcag258 and runs under
+  // our wcag22aa selection, so this used to come back as "9.2.5.8" — a clause
+  // EN 301 549 v3.2.1 does not contain.
+  it('gives a WCAG 2.2-only criterion no clause, and says what it is waiting on', () => {
+    expect(classify(['cat.sensory-and-visual-cues', 'wcag22aa', 'wcag258'])).toEqual({
+      wcag: '2.5.8',
+      name: 'Target Size (Minimum)',
+      en301549: null,
+      arrivesIn: 'v4.1.1',
+      level: 'AA',
+      bestPractice: false,
+    });
+  });
+
+  // The inventory is transcribed from the W3C normative text; a tag is axe's
+  // own bookkeeping. Where they could disagree, the inventory wins.
+  it('takes the level from the inventory rather than the tag', () => {
+    // wcag2a is present but 1.4.3 is Level AA.
+    expect(classify(['wcag2a', 'wcag143']).level).toBe('AA');
   });
 });
