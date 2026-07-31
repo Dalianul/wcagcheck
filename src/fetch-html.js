@@ -16,6 +16,11 @@ function json(body, status) {
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'public, max-age=300',
+      // This body carries a scanned page's raw HTML. nosniff keeps a browser
+      // from ever deciding to treat the response as the document it contains.
+      // public/_headers cannot cover this — it applies to static assets only,
+      // not to responses the Worker builds.
+      'x-content-type-options': 'nosniff',
     },
   });
 }

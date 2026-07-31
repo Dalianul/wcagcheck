@@ -1,0 +1,38 @@
+# Response headers for static assets. Parsed by the Workers assets runtime, not
+# served. Does not apply to Worker-generated responses (/api/*, the 404 page),
+# which set their own headers in src/.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: same-origin
+  # script-src has no 'unsafe-inline', which is the point: an event-handler
+  # attribute that survived sanitise.js cannot fire. That vector shipped once
+  # already (<img src="x"/onerror=…>), so the sanitiser should not be the only
+  # thing standing between a scanned page and our origin.
+  #
+  # Everything passive is deliberately wide open. The scanned page renders in a
+  # shadow root and its stylesheets, fonts and images must load or colour
+  # contrast is measured against an unstyled page — which is worse than not
+  # measuring it, because it looks like an answer.
+  #
+  # connect-src is wide for the same reason, and it is not a loss: our own code
+  # only ever calls same-origin, and no third-party script can run to abuse it.
+  # Measured — 'self' alone blocked a <link rel=preload> for one of the target's
+  # stylesheets on dedeman.ro, which is precisely how contrast gets silently
+  # mis-measured. CSS can already reach the network through the wide img-src
+  # that contrast checking requires, so tightening this buys nothing real.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: https: http:; media-src 'self' https: http:; connect-src 'self' https: http:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# Version-pinned and 572 KB. Without this it revalidates on every single scan,
+# because the assets runtime defaults to max-age=0, must-revalidate.
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fingerprint-free filenames, so they cannot be cached immutably — but a day of
+# freshness beats a round trip on every page view.
+/styles.css
+  Cache-Control: public, max-age=86400
+/favicon.svg
+  Cache-Control: public, max-age=86400

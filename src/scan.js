@@ -650,6 +650,7 @@ export async function handleScan(request) {
         'content-type': 'application/json; charset=utf-8',
         'cache-control': 'public, max-age=300',
         'access-control-allow-origin': '*',
+        'x-content-type-options': 'nosniff',
       },
     });
 
