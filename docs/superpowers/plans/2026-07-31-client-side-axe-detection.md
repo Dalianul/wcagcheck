@@ -659,7 +659,334 @@ serving browsers normally."
 
 ---
 
-### Task 4: The axe runner
+### Task 4 — SUPERSEDED by Task 4R below
+
+The iframe approach in this task **does not work**. Measured in Chrome against
+axe-core 4.12.1:
+
+| Attempt | Result |
+|---|---|
+| `axe.run(frame.contentDocument)` | throws *"axe.run arguments are invalid"* — a `Document` is not a valid context |
+| `axe.run({include:[frame.contentDocument.documentElement]})` | accepted, but finds only `frame-title` — nothing inside the frame |
+| `axe.run(frameElement)` | same |
+| open shadow root on a div | **works** — finds `button-name`, `image-alt`, `label`, `link-name`; inline `<script>` does not execute |
+
+axe's cross-frame traversal requires axe to be running *inside* each frame,
+which needs `allow-scripts`, which is ruled out. Contrast additionally requires
+the content to be genuinely visible:
+
+| Container | `color-contrast` |
+|---|---|
+| off-screen `left:-10000px` | `inapplicable` — never evaluated |
+| in viewport, `opacity:0.01` | `incomplete` (`bgOverlap`) |
+| in viewport, visible | **`violations: 1`** — correct |
+
+Kept here rather than deleted, because the reason it failed is the most useful
+thing in this document.
+
+---
+
+### Task 4R: The axe runner (shadow DOM)
+
+**Files:**
+- Create: `public/sanitise.js`
+- Create: `public/axe-runner.js` (replacing the superseded version)
+- Create: `public/dev/fixture.html`
+- Test: `test/sanitise.test.js`
+
+**Interfaces:**
+- Consumes: `classify` from `public/en301549.js`; global `axe` from `/vendor/axe.min.js`; `GET /api/fetch`
+- Produces:
+  - `sanitiseForAnalysis(html: string, baseUrl: string) → string` in `public/sanitise.js`
+  - `runAxeScan(target: string) → Promise<Result>` in `public/axe-runner.js`, with `Result` as the superseded task defined it, plus `contrastScope: 'visible-area' | 'not-assessed'`
+
+**The security position, stated because it is the crux of this task**
+
+We are inserting third-party HTML into our own origin. `innerHTML` never
+executes `<script>`, but event-handler attributes fire on their own —
+`<img src=x onerror=…>` runs without any interaction. So sanitisation is not
+defence in depth here, it is the only barrier.
+
+The threat model is narrow, which is what makes hand-written sanitisation
+defensible: we insert once via `innerHTML`, never execute scripts, never
+activate links, and remove the subtree immediately. The vectors that fire
+automatically are event-handler attributes and auto-loading embedded content.
+Removing **every** attribute matching `/^on/i` — not a blocklist of specific
+handlers — is complete for that class.
+
+- [ ] **Step 1: Write the failing sanitiser test**
+
+Create `test/sanitise.test.js`. Note these tests run in the Workers pool, which
+has no `DOMParser`, so the sanitiser must be string-based and dependency-free:
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import { sanitiseForAnalysis } from '../public/sanitise.js';
+
+const base = 'https://example.com/shop/page';
+
+describe('sanitiseForAnalysis — things that execute', () => {
+  it('removes script elements and their contents', () => {
+    const out = sanitiseForAnalysis('<p>a</p><script>window.x=1</script><p>b</p>', base);
+    expect(out).not.toMatch(/<script/i);
+    expect(out).not.toMatch(/window\.x/);
+  });
+
+  // The vector that fires with no interaction at all.
+  it('removes onerror', () => {
+    const out = sanitiseForAnalysis('<img src="missing.png" onerror="window.x=1" alt="a">', base);
+    expect(out).not.toMatch(/onerror/i);
+    expect(out).toMatch(/alt="a"/);
+  });
+
+  it('removes every on* handler regardless of name or case', () => {
+    const out = sanitiseForAnalysis(
+      '<div ONCLICK="a()" onMouseOver=\'b()\' onfocus=c() onanything="d()">x</div>', base
+    );
+    expect(out).not.toMatch(/on[a-z]+\s*=/i);
+  });
+
+  it('removes javascript: urls but keeps the element', () => {
+    const out = sanitiseForAnalysis('<a href="javascript:alert(1)">click</a>', base);
+    expect(out).not.toMatch(/javascript:/i);
+    expect(out).toMatch(/<a /);
+  });
+
+  it('removes auto-loading embedded content', () => {
+    const out = sanitiseForAnalysis('<iframe src="x"></iframe><object data="y"></object><embed src="z">', base);
+    expect(out).not.toMatch(/<iframe|<object|<embed/i);
+  });
+
+  it('removes meta refresh', () => {
+    const out = sanitiseForAnalysis('<meta http-equiv="refresh" content="0;url=http://evil.test">', base);
+    expect(out).not.toMatch(/http-equiv/i);
+  });
+});
+
+describe('sanitiseForAnalysis — things axe needs kept', () => {
+  it('keeps style elements, because contrast depends on them', () => {
+    const out = sanitiseForAnalysis('<style>.a{color:#999;background:#fff}</style><p class="a">x</p>', base);
+    expect(out).toMatch(/<style>/);
+    expect(out).toMatch(/color:#999/);
+  });
+
+  it('keeps accessibility attributes', () => {
+    const html = '<button aria-label="Close" aria-expanded="false" role="button" tabindex="0"></button>';
+    const out = sanitiseForAnalysis(html, base);
+    for (const attr of ['aria-label="Close"', 'aria-expanded="false"', 'role="button"', 'tabindex="0"']) {
+      expect(out).toContain(attr);
+    }
+  });
+
+  it('keeps alt, label association and lang', () => {
+    const html = '<html lang="ro"><img src="a.png" alt=""><label for="x">N</label><input id="x"></html>';
+    const out = sanitiseForAnalysis(html, base);
+    expect(out).toMatch(/lang="ro"/);
+    expect(out).toMatch(/alt=""/);
+    expect(out).toMatch(/for="x"/);
+  });
+});
+
+describe('sanitiseForAnalysis — url resolution', () => {
+  // Shadow DOM ignores <base>, so relative URLs must be absolute before
+  // insertion or the target's stylesheets never load and contrast is wrong.
+  it('absolutises relative stylesheet and image urls', () => {
+    const out = sanitiseForAnalysis(
+      '<link rel="stylesheet" href="/css/main.css"><img src="../img/a.png" alt="a">', base
+    );
+    expect(out).toContain('https://example.com/css/main.css');
+    expect(out).toContain('https://example.com/img/a.png');
+  });
+
+  it('leaves absolute and data urls alone', () => {
+    const out = sanitiseForAnalysis(
+      '<img src="https://cdn.test/a.png" alt="a"><img src="data:image/gif;base64,AA" alt="b">', base
+    );
+    expect(out).toContain('https://cdn.test/a.png');
+    expect(out).toContain('data:image/gif;base64,AA');
+  });
+});
+```
+
+- [ ] **Step 2: Run it and confirm it fails**
+
+```bash
+npx vitest run test/sanitise.test.js
+```
+
+Expected: FAIL — cannot resolve `../public/sanitise.js`.
+
+- [ ] **Step 3: Implement `public/sanitise.js`**
+
+String-based so it runs both in the browser and in the Workers test pool.
+
+```javascript
+/**
+ * Prepares third-party HTML for rendering inside our own origin.
+ *
+ * We render scanned pages in an open shadow root so axe can traverse them,
+ * which means the browser gives us no isolation — sanitisation is the only
+ * barrier, not a second layer.
+ *
+ * The threat model is deliberately narrow: the HTML is inserted once via
+ * innerHTML, no script ever executes (innerHTML does not run <script>), no link
+ * is activated, and the subtree is removed immediately. What remains is content
+ * that acts on its own — event-handler attributes and auto-loading embeds. So
+ * every attribute matching /^on/i is removed, by pattern rather than by a list
+ * of known handler names, which is what makes the removal complete for that
+ * class rather than a guess at today's vocabulary.
+ *
+ * Style elements and accessibility attributes are preserved deliberately:
+ * stripping them would silently change the very results we are measuring.
+ */
+
+const VOID_OR_PAIRED_REMOVED = ['script', 'iframe', 'object', 'embed', 'noscript', 'template'];
+
+function stripElement(html, tag) {
+  const paired = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}\\s*>`, 'gi');
+  const selfClosing = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi');
+  return html.replace(paired, '').replace(selfClosing, '');
+}
+
+/** Rewrites a relative URL against the scanned page's address. */
+function absolutise(value, baseUrl) {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if (/^(https?:|data:|mailto:|tel:|#)/i.test(trimmed)) return trimmed;
+  try {
+    return new URL(trimmed, baseUrl).toString();
+  } catch {
+    return trimmed;
+  }
+}
+
+export function sanitiseForAnalysis(html, baseUrl) {
+  let out = String(html);
+
+  for (const tag of VOID_OR_PAIRED_REMOVED) out = stripElement(out, tag);
+
+  // Anything that navigates or reloads on its own.
+  out = out.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
+
+  // Every event-handler attribute, quoted or bare, any case.
+  out = out.replace(/\son[a-z0-9_-]*\s*=\s*"[^"]*"/gi, '');
+  out = out.replace(/\son[a-z0-9_-]*\s*=\s*'[^']*'/gi, '');
+  out = out.replace(/\son[a-z0-9_-]*\s*=\s*[^\s>]+/gi, '');
+
+  // Script-bearing URLs, keeping the element so axe still evaluates it.
+  out = out.replace(
+    /\s(href|src|action|formaction|xlink:href)\s*=\s*(["']?)\s*(javascript|vbscript|data:text\/html)[^"'\s>]*\2/gi,
+    ' $1="#"'
+  );
+
+  // Shadow DOM ignores <base>, so URLs must already be absolute.
+  out = out.replace(
+    /\s(href|src|srcset|poster)\s*=\s*"([^"]*)"/gi,
+    (whole, attr, value) => ` ${attr}="${absolutise(value, baseUrl)}"`
+  );
+  out = out.replace(
+    /\s(href|src|srcset|poster)\s*=\s*'([^']*)'/gi,
+    (whole, attr, value) => ` ${attr}='${absolutise(value, baseUrl)}'`
+  );
+
+  return out;
+}
+```
+
+- [ ] **Step 4: Run the sanitiser tests, then the full suite**
+
+```bash
+npx vitest run test/sanitise.test.js
+npx vitest run
+```
+
+Expected: sanitiser tests PASS; full suite PASS including every pre-existing test.
+
+- [ ] **Step 5: Mutation-check the sanitiser — this is the security barrier**
+
+For each row: break it, confirm the named test fails, restore. Record every result.
+
+| Break this | Expected failing test |
+|---|---|
+| delete the three `\son[a-z0-9_-]*` replacements | "removes onerror" and "removes every on* handler" |
+| remove `'script'` from `VOID_OR_PAIRED_REMOVED` | "removes script elements and their contents" |
+| remove the `javascript\|vbscript` replacement | "removes javascript: urls but keeps the element" |
+| make `absolutise` return `value` unchanged | "absolutises relative stylesheet and image urls" |
+| add `'style'` to `VOID_OR_PAIRED_REMOVED` | "keeps style elements, because contrast depends on them" |
+
+If any row does not produce a failure, that test protects nothing — fix the test so it does.
+
+- [ ] **Step 6: Create the verification fixture**
+
+Create `public/dev/fixture.html`:
+
+```html
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<title>axe verification fixture</title>
+<style>
+  .low-contrast { color: #999999; background: #ffffff; font-size: 16px; }
+</style>
+</head>
+<body>
+  <!-- expect: html-has-lang (no lang attribute above) -->
+  <!-- expect: image-alt -->
+  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+  <!-- expect: link-name -->
+  <a href="/somewhere"></a>
+  <!-- expect: button-name -->
+  <button></button>
+  <!-- expect: label -->
+  <input type="text" name="unlabelled">
+  <!-- expect: color-contrast -->
+  <p class="low-contrast">This grey text on white fails the AA contrast requirement.</p>
+  <!-- expect: heading-order -->
+  <h1>One</h1>
+  <h4>Four, skipping two and three</h4>
+</body>
+</html>
+```
+
+- [ ] **Step 7: Implement `public/axe-runner.js`** — full code in the section below, under "Task 4R runner source".
+
+- [ ] **Step 8: Syntax check, full suite, commit**
+
+```bash
+node --check public/sanitise.js
+node --check public/axe-runner.js
+npx vitest run
+```
+
+Expected: no syntax output; full suite passes. In-browser verification is done by
+the controller, not this task.
+
+```bash
+git add public/sanitise.js public/axe-runner.js public/dev/fixture.html test/sanitise.test.js
+git commit -m "Run axe in a shadow root instead of an iframe
+
+axe cannot analyse a sandboxed frame: cross-frame support needs axe running
+inside the frame, which needs allow-scripts, which would let sandboxed
+content escape into our origin. Measured — passing frame.contentDocument
+throws, and the context forms axe accepts find only frame-title. An open
+shadow root works and keeps the target's CSS off our page.
+
+The stage renders visibly because axe cannot judge contrast otherwise:
+off-screen content is inapplicable, near-transparent comes back incomplete.
+Only on-screen content yields a verdict, so contrastScope reports
+visible-area rather than implying whole-page coverage.
+
+Rendering third-party HTML in our own origin means the browser gives us no
+isolation, so sanitise.js is the only barrier. innerHTML never executes
+script elements, but handler attributes fire unprompted, so every attribute
+matching /^on/i is removed by pattern rather than by a list of known names."
+```
+
+---
+
+### Task 4 (original, superseded — kept for the record)
 
 **Files:**
 - Create: `public/axe-runner.js`
@@ -1162,6 +1489,155 @@ axe loads only on scan, keeping Lighthouse at 100."
 ```
 
 ---
+
+## Task 4R runner source
+
+The complete `public/axe-runner.js` referenced by Task 4R Step 7:
+
+```javascript
+/**
+ * Runs axe-core in the visitor's browser against a fetched page.
+ *
+ * The page renders in an OPEN SHADOW ROOT, not an iframe. axe cannot traverse
+ * into a sandboxed frame — its cross-frame support requires axe running inside
+ * the frame, which needs allow-scripts, which would let sandboxed content escape
+ * into our origin. A shadow root is the only container axe can see into that also
+ * keeps the target's CSS off our page.
+ *
+ * The stage is rendered VISIBLY during the scan because axe cannot judge colour
+ * contrast otherwise: off-screen content is reported inapplicable and
+ * near-transparent content comes back incomplete. Only what is genuinely on
+ * screen yields a contrast verdict, which is why contrastScope says
+ * 'visible-area' instead of implying whole-page coverage.
+ */
+
+import { classify } from './en301549.js';
+import { sanitiseForAnalysis } from './sanitise.js';
+
+const AXE_URL = '/vendor/axe.min.js';
+const AXE_VERSION = 'axe-core 4.12.1';
+const MAX_EXAMPLES = 5;
+const STAGE_WIDTH = 1280;
+const RENDER_SETTLE_MS = 350;
+
+let axeLoading = null;
+
+/** Loads axe once, on first scan. Never on page load — it is ~570 KB. */
+function loadAxe() {
+  if (window.axe) return Promise.resolve(window.axe);
+  if (axeLoading) return axeLoading;
+  axeLoading = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = AXE_URL;
+    script.onload = () => (window.axe ? resolve(window.axe) : reject(new Error('axe failed to initialise')));
+    script.onerror = () => reject(new Error('Could not load the analysis engine.'));
+    document.head.append(script);
+  });
+  return axeLoading;
+}
+
+/**
+ * Builds the visible stage the scanned page renders into.
+ *
+ * Deliberately on screen and opaque: hiding it or fading it out silently
+ * disables every contrast check.
+ */
+function buildStage(html, finalUrl) {
+  const stage = document.createElement('div');
+  stage.setAttribute('aria-hidden', 'true');
+  stage.style.cssText =
+    'position:fixed;top:0;left:0;z-index:9998;' +
+    `width:min(${STAGE_WIDTH}px,100vw);height:100vh;overflow:hidden;` +
+    'background:#fff;opacity:1;pointer-events:none;';
+
+  const host = document.createElement('div');
+  host.style.cssText = `width:${STAGE_WIDTH}px;`;
+  stage.append(host);
+  document.body.append(stage);
+
+  host.attachShadow({ mode: 'open' }).innerHTML = sanitiseForAnalysis(html, finalUrl);
+  return { stage, host };
+}
+
+function toFinding(result) {
+  const meta = classify(result.tags);
+  return {
+    id: result.id,
+    help: result.help,
+    helpUrl: result.helpUrl,
+    impact: result.impact ?? null,
+    wcag: meta.wcag,
+    en301549: meta.en301549,
+    level: meta.level,
+    nodes: result.nodes.length,
+    examples: result.nodes.slice(0, MAX_EXAMPLES).map((node) => {
+      const snippet = node.html || '';
+      return snippet.length > 200 ? `${snippet.slice(0, 197)}...` : snippet;
+    }),
+  };
+}
+
+export async function runAxeScan(target) {
+  const response = await fetch(`/api/fetch?url=${encodeURIComponent(target)}`);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'That page could not be fetched.');
+
+  const axe = await loadAxe();
+  const { stage, host } = buildStage(payload.html, payload.finalUrl);
+
+  try {
+    // Let the target's stylesheets settle, or contrast reads an unstyled page.
+    await new Promise((resolve) => setTimeout(resolve, RENDER_SETTLE_MS));
+
+    const results = await axe.run(host, {
+      runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'],
+    });
+
+    const violations = results.violations.map(toFinding);
+    const contrastEvaluated = [...results.violations, ...results.passes, ...results.incomplete].some(
+      (r) => r.id === 'color-contrast'
+    );
+
+    return {
+      finalUrl: payload.finalUrl,
+      engine: AXE_VERSION,
+      truncated: Boolean(payload.truncated),
+      contrastScope: contrastEvaluated ? 'visible-area' : 'not-assessed',
+      requirements: violations.filter((f) => f.en301549),
+      bestPractices: violations.filter((f) => !f.en301549),
+      // Never folded into passes: axe could not decide these.
+      incomplete: results.incomplete.map(toFinding),
+      counts: {
+        violations: results.violations.length,
+        incomplete: results.incomplete.length,
+        passes: results.passes.length,
+        inapplicable: results.inapplicable.length,
+      },
+    };
+  } finally {
+    stage.remove();
+  }
+}
+```
+
+## Task 5 copy correction
+
+Task 5 Step 4 said to change the on-page note to "100+ checks incl. colour
+contrast". That overstates what the architecture delivers, so use instead:
+
+```html
+        <p class="probe__note">95+ checks &middot; contrast on the visible area &middot; no signup</p>
+```
+
+And the "Static analysis only" explainer becomes:
+
+```html
+          Your browser renders the page and runs the axe-core engine against it
+          &mdash; the same engine used in most accessibility test suites. Scripts
+          are never executed, so content built by JavaScript is not analysed, and
+          colour contrast is judged only for the part of the page that fits on
+          screen.
+```
 
 ## Not in this plan
 
