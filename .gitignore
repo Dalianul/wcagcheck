@@ -4,3 +4,7 @@ node_modules/
 .dev.vars
 *.log
 .superpowers/
+
+# impeccable: per-developer state (config.json and design.json are shared and tracked)
+.impeccable/hook.cache.json
+.impeccable/config.local.json
