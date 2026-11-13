@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T00:00:00Z",
+  "title": "Design System: wcagcheck.eu",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "--ink",
+        "canonical": "#12203a"
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "--ink-soft",
+        "canonical": "#4a5670"
+      },
+      "ink-hover": {
+        "role": "neutral",
+        "displayName": "literal at public/styles.css:188 (not a token)",
+        "canonical": "#0a1628"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "--paper",
+        "canonical": "#fbfbf9"
+      },
+      "paper-sunk": {
+        "role": "neutral",
+        "displayName": "--paper-sunk",
+        "canonical": "#f2f2ee"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "--rule",
+        "canonical": "#d5d8e0"
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "--rule-strong",
+        "canonical": "#b4b9c6"
+      },
+      "serious": {
+        "role": "severity",
+        "displayName": "--serious",
+        "canonical": "#a51b12"
+      },
+      "moderate": {
+        "role": "severity",
+        "displayName": "--moderate",
+        "canonical": "#7a4e00"
+      },
+      "minor": {
+        "role": "severity",
+        "displayName": "--minor",
+        "canonical": "#4a5670"
+      },
+      "pass": {
+        "role": "severity",
+        "displayName": "--pass",
+        "canonical": "#14573a"
+      },
+      "print-ink": {
+        "role": "neutral",
+        "displayName": "print literal (public/styles.css:692, 749)",
+        "canonical": "#000000"
+      },
+      "print-paper": {
+        "role": "neutral",
+        "displayName": "print literal (public/styles.css:691)",
+        "canonical": "#ffffff"
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body (--sans)",
+        "purpose": "Body text and headings; system font stack."
+      },
+      "label": {
+        "displayName": "Label (--mono)",
+        "purpose": "Eyebrows, bar, scope and guides headings; uppercase mono."
+      },
+      "meta": {
+        "displayName": "Meta (--mono)",
+        "purpose": "Entry meta line, tally labels, table headers."
+      },
+      "figure": {
+        "displayName": "Figure (--mono)",
+        "purpose": "Tally counts."
+      }
+    },
+    "shadows": [
+      {
+        "name": "probe-focus-halo",
+        "value": "0 0 0 3px var(--rule-strong)",
+        "purpose": "Focus halo on the URL field wrapper (.probe:focus-within). The only box-shadow in the stylesheet."
+      }
+    ],
+    "motion": [
+      {
+        "name": "sweep",
+        "value": "sweep 1.1s ease-in-out infinite",
+        "purpose": "Scan-in-progress bead; replaced by a static 40% opacity bar under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "34rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Scan Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action: scan the entered URL.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Scan</button>",
+      "css": ".ds-btn-primary { font: inherit; font-weight: 640; font-size: 1.0625rem; border: 0; background: #12203a; color: #fbfbf9; padding: 1rem 2.25rem; cursor: pointer; } .ds-btn-primary:hover { background: #0a1628; } .ds-btn-primary:focus-visible { outline: 3px solid #12203a; outline-offset: 2px; }"
+    },
+    {
+      "name": "Probe Field",
+      "kind": "input",
+      "refersTo": "field-probe",
+      "description": "Oversized URL field with 2px ink border, mono text, button attached on the right.",
+      "html": "<div class=\"ds-probe\"><input class=\"ds-probe-field\" type=\"url\" placeholder=\"https://example.ro/contact\"><button class=\"ds-probe-go\" type=\"button\">Scan</button></div>",
+      "css": ".ds-probe { display: grid; grid-template-columns: 1fr auto; border: 2px solid #12203a; background: #fbfbf9; } .ds-probe:focus-within { box-shadow: 0 0 0 3px #b4b9c6; } .ds-probe-field { font-family: ui-monospace, \"SF Mono\", SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.125rem; border: 0; background: transparent; color: #12203a; padding: 1.5rem; min-width: 0; outline: none; } .ds-probe-field::placeholder { color: #b4b9c6; } .ds-probe-go { font: inherit; font-weight: 640; border: 0; border-left: 2px solid #12203a; background: #12203a; color: #fbfbf9; padding-inline: 2.25rem; }"
+    },
+    {
+      "name": "Bar",
+      "kind": "nav",
+      "refersTo": "skip-link",
+      "description": "Top utility bar: mono uppercase wordmark and standard line over a 1px rule.",
+      "html": "<header class=\"ds-bar\"><span class=\"ds-bar-mark\">wcagcheck.eu</span><span class=\"ds-bar-standard\">EN 301 549 &middot; WCAG 2.2 &middot; Level A/AA</span></header>",
+      "css": ".ds-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; justify-content: space-between; align-items: baseline; padding: 0.875rem 1.5rem; border-bottom: 1px solid #d5d8e0; font-family: ui-monospace, \"SF Mono\", SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: #12203a; } .ds-bar-mark { font-weight: 700; } .ds-bar-standard { color: #4a5670; }"
+    },
+    {
+      "name": "Notice",
+      "kind": "card",
+      "refersTo": "notice",
+      "description": "Error or status message with a serious-coloured left border.",
+      "html": "<div class=\"ds-notice\"><p class=\"ds-notice-title\">Enter a page address first.</p><p>For example: https://example.ro/contact</p></div>",
+      "css": ".ds-notice { border-left: 4px solid #a51b12; background: #f2f2ee; padding: 1rem 1.25rem; color: #4a5670; } .ds-notice p { margin: 0; } .ds-notice .ds-notice-title { font-weight: 660; margin: 0 0 0.25rem; color: #12203a; }"
+    },
+    {
+      "name": "Ledger Entry",
+      "kind": "custom",
+      "refersTo": "sample-chip",
+      "description": "One finding: mono clause number coloured by severity, title, count, meta line, sample chips.",
+      "html": "<article class=\"ds-entry\"><p class=\"ds-clause\">9.1.4.3</p><div><div class=\"ds-entry-head\"><h3>Elements must have sufficient colour contrast</h3><p class=\"ds-count\">3 elements</p></div><p class=\"ds-meta\">serious &middot; WCAG 1.4.3 Contrast (Minimum) &middot; Level AA</p><ul class=\"ds-samples\"><li>&lt;p class=\"low\"&gt;</li></ul></div></article>",
+      "css": ".ds-entry { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.5rem 2rem; padding-block: 1.75rem; border-bottom: 1px solid #d5d8e0; color: #12203a; } .ds-clause { margin: 0; font-family: ui-monospace, \"SF Mono\", SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; color: #a51b12; } .ds-entry-head { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: baseline; justify-content: space-between; } .ds-entry h3 { margin: 0; font-size: 1.125rem; font-weight: 650; letter-spacing: -0.01em; } .ds-count { margin: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.8125rem; color: #4a5670; } .ds-meta { margin: 0.5rem 0 0.75rem; font-family: ui-monospace, Menlo, monospace; font-size: 0.6875rem; letter-spacing: 0.07em; text-transform: uppercase; color: #4a5670; } .ds-samples { list-style: none; margin: 0.875rem 0 0; padding: 0; } .ds-samples li { font-family: ui-monospace, Menlo, monospace; font-size: 0.78125rem; color: #4a5670; background: #f2f2ee; padding: 0.375rem 0.625rem; }"
+    },
+    {
+      "name": "Tally",
+      "kind": "custom",
+      "refersTo": "scope-box",
+      "description": "Results summary: 2px ink top rule, mono counts coloured by severity.",
+      "html": "<div class=\"ds-tally\"><div class=\"ds-fig ds-fig-serious\"><span class=\"ds-num\">4</span><span class=\"ds-lbl\">Requirements failed</span></div><div class=\"ds-fig ds-fig-pass\"><span class=\"ds-num\">12</span><span class=\"ds-lbl\">Clear</span></div></div>",
+      "css": ".ds-tally { display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; align-items: flex-end; border-top: 2px solid #12203a; border-bottom: 1px solid #d5d8e0; padding-block: 1.5rem; } .ds-fig { display: flex; flex-direction: column-reverse; gap: 0.125rem; } .ds-num { font-family: ui-monospace, Menlo, monospace; font-size: 2.5rem; line-height: 1; font-weight: 600; letter-spacing: -0.02em; } .ds-lbl { font-family: ui-monospace, Menlo, monospace; font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: #4a5670; } .ds-fig-serious .ds-num { color: #a51b12; } .ds-fig-pass .ds-num { color: #14573a; }"
+    }
+  ],
+  "narrative": {
+    "overview": "Ink on paper, flat and square, with system font stacks and a mono voice for instrument-like labels. Colour is reserved for severity. Source of truth is public/styles.css; DESIGN.md mirrors it.",
+    "keyCharacteristics": [
+      "One stylesheet, public/styles.css, shared by all pages",
+      "Single light theme, no dark mode",
+      "No border-radius, one box-shadow (field focus halo)",
+      "Colour only for severity, always paired with words"
+    ],
+    "rules": [
+      {
+        "name": "The Contrast-Checked Rule",
+        "body": "Each severity colour is contrast-checked against --paper, since a tool that grades contrast has no business failing it (public/styles.css:13).",
+        "section": "colors"
+      },
+      {
+        "name": "The Words-Too Rule",
+        "body": "Colour is never the only carrier of a verdict; the status column says the same in words (public/styles.css:461).",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do use colour only to carry severity or verdict, and pair it with words.",
+      "Do contrast-check any new severity colour against --paper before adding it.",
+      "Do keep wide tables scrolling inside their own box.",
+      "Do keep a screen-reader prefix on bare clause numbers."
+    ],
+    "donts": [
+      "Don't add aria-hidden, hidden, inert or display:none to the analysis stage (public/axe-runner.js:51).",
+      "Don't outline #results on focus; it is a programmatic focus target, not a control (public/styles.css:52)."
+    ]
+  }
+}
